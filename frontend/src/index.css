@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap');
+@import "tailwindcss";
+
+:root {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    background-color: black;
+    font-family: "Quicksand", sans-serif;
+    font-weight: 600;
+}
+
+body {
+    font-family: "Quicksand", sans-serif;
+    font-weight: 600;
+    background-color: black;
+    color: white;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
