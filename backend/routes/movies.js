@@ -23,23 +23,28 @@ router.post('/', auth, async (req, res) => {
 
     movies.unshift(newMovie);
     await writeJson(MOVIES_FILE, movies);
+    req.app.get('io').emit('movies_updated', movies);
     res.json({ message: "Film eklendi", movie: newMovie });
 });
 
 router.delete('/:id', auth, async (req, res) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: "Bunu sadece Admin silebilir!" });
-    }
-
     const idToDelete = parseInt(req.params.id);
     let movies = await readJson(MOVIES_FILE);
     
+    const movieToDelete = movies.find(m => m.id === idToDelete);
+    if (!movieToDelete) return res.status(404).json({ error: "Film bulunamadı" });
+
+    if (req.user.role !== 'admin' && movieToDelete.added_by !== req.user.name) {
+        return res.status(403).json({ error: "Bu filmi silme yetkiniz yok!" });
+    }
+
     const initialLength = movies.length;
     movies = movies.filter(movie => movie.id !== idToDelete);
 
     if (movies.length === initialLength) return res.status(404).json({ error: "Bulunamadı" });
 
     await writeJson(MOVIES_FILE, movies);
+    req.app.get('io').emit('movies_updated', movies);
     res.json({ message: "Film silindi", id: idToDelete });
 });
 

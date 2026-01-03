@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ReactPlayer from "react-player";
 import TopBar from "../components/TopBar";
 import BottomNavbar from "../components/BottomNavbar";
+import ConfirmModal from "../components/ConfirmModal";
 import toast from "react-hot-toast";
+import { useAuth } from "../contexts/AuthContext";
+import { useSocket } from "../contexts/SocketContext";
+import { Film, Plus, Trash2, X, Clapperboard } from "lucide-react";
 
 interface Movie {
   id: number;
@@ -17,50 +21,45 @@ export default function Backstage() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [currentMovie, setCurrentMovie] = useState<Movie | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newVideoUrl, setNewVideoUrl] = useState("");
 
-  const [userName, setUserName] = useState("");
-  const [userRole, setUserRole] = useState("");
-  const userKey = localStorage.getItem("user_key");
+  const { userKey, userRole, userProfile } = useAuth();
+  const { socket } = useSocket();
+  const isFetched = useRef(false);
 
   const fetchMovies = async () => {
     try {
       const res = await fetch("http://localhost:3001/movies", {
-        headers: { "x-api-key": userKey || "" },
+        headers: { Authorization: `Bearer ${userKey || ""}` },
       });
+
       const data = await res.json();
       if (res.ok) setMovies(data);
     } catch (err) {
       toast.error("Hata!");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchUserProfile = async () => {
-    if (!userKey) return;
-    try {
-      const res = await fetch("http://localhost:3001/validate-key", {
-        headers: { "x-api-key": userKey },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setUserName(data.name);
-        setUserRole(data.role);
-      }
-    } catch (err) {
-      console.error("User profile error", err);
     }
   };
 
   useEffect(() => {
-    fetchUserProfile();
+    if (isFetched.current) return;
+    isFetched.current = true;
     fetchMovies();
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("movies_updated", (updatedMovies: Movie[]) => {
+      setMovies(updatedMovies);
+    });
+
+    return () => {
+      socket.off("movies_updated");
+    };
+  }, [socket]);
 
   const handleAddMovie = async () => {
     if (!newTitle || !newVideoUrl) return toast.error("Eksik alan!");
@@ -69,8 +68,9 @@ export default function Backstage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": userKey || "",
+          Authorization: `Bearer ${userKey || ""}`,
         },
+
         body: JSON.stringify({ title: newTitle, preview_url: newVideoUrl }),
       });
       if (res.ok) {
@@ -78,7 +78,6 @@ export default function Backstage() {
         setIsAddModalOpen(false);
         setNewTitle("");
         setNewVideoUrl("");
-        fetchMovies();
       }
     } catch (err) {
       toast.error("Hata!");
@@ -90,12 +89,12 @@ export default function Backstage() {
     try {
       const res = await fetch(`http://localhost:3001/movies/${deleteId}`, {
         method: "DELETE",
-        headers: { "x-api-key": userKey || "" },
+        headers: { Authorization: `Bearer ${userKey || ""}` },
       });
+
       if (res.ok) {
         toast.success("Silindi");
         setDeleteId(null);
-        fetchMovies();
       }
     } catch (err) {
       toast.error("Hata!");
@@ -120,7 +119,7 @@ export default function Backstage() {
           ) : (
             <div className="h-full flex items-center justify-center text-white/20">
               <div className="text-center space-y-2">
-                <i className="ri-film-line text-4xl"></i>
+                <Clapperboard size={48} className="mx-auto" />
                 <p>Film seçilmedi</p>
               </div>
             </div>
@@ -138,7 +137,7 @@ export default function Backstage() {
             onClick={() => setIsAddModalOpen(true)}
             className="flex items-center gap-2 bg-white/10 active:bg-white/20 border border-white/10 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
           >
-            <i className="ri-add-line text-lg"></i>
+            <Plus size={18} />
             Film Ekle
           </button>
         </div>
@@ -165,7 +164,7 @@ export default function Backstage() {
                       : "bg-white/10 text-white/40"
                   }`}
                 >
-                  <i className="ri-movie-2-line"></i>
+                  <Film size={18} />
                 </div>
                 <div className="flex flex-col">
                   <span
@@ -185,7 +184,7 @@ export default function Backstage() {
                 </div>
               </div>
 
-              {userRole === "admin" && (
+              {(userRole === "admin" || m.added_by === userProfile?.name) && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -193,7 +192,7 @@ export default function Backstage() {
                   }}
                   className="w-10 h-10 flex items-center justify-center rounded-lg text-white/20 active:text-red-500 active:bg-red-500/20 transition-all"
                 >
-                  <i className="ri-delete-bin-line text-lg"></i>
+                  <Trash2 size={18} />
                 </button>
               )}
             </div>
@@ -212,7 +211,7 @@ export default function Backstage() {
                 onClick={() => setIsAddModalOpen(false)}
                 className="text-white/40 p-2"
               >
-                <i className="ri-close-line text-2xl"></i>
+                <X size={24} />
               </button>
             </div>
 
@@ -262,36 +261,16 @@ export default function Backstage() {
         </div>
       )}
 
-      {deleteId && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
-          <div className="bg-[#121212] p-6 rounded-3xl w-full max-w-sm border border-white/10 space-y-6">
-            <div className="text-center space-y-3">
-              <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-                <i className="ri-delete-bin-line text-3xl text-red-500"></i>
-              </div>
-              <h3 className="text-xl font-bold text-white">Emin misiniz?</h3>
-              <p className="text-white/40 text-sm px-4">
-                Bu film arşivden kalıcı olarak silinecektir. Bu işlem geri
-                alınamaz.
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="flex-1 p-4 bg-white/5 border border-white/5 text-white/60 rounded-2xl font-bold"
-              >
-                Vazgeç
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="flex-1 p-4 bg-red-500/10 active:bg-red-500/20 text-red-500 border border-red-500/20 rounded-2xl font-bold transition-all"
-              >
-                Sil
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+        title="Emin misiniz?"
+        description="Bu film arşivden kalıcı olarak silinecektir. Bu işlem geri alınamaz."
+        confirmText="Sil"
+        variant="danger"
+        icon={<Trash2 size={32} className="text-red-500" />}
+      />
     </div>
   );
 }

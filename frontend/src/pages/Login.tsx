@@ -1,18 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function LoginPage() {
   const [key, setKey] = useState("");
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
 
   useEffect(() => {
-    const savedKey = localStorage.getItem("user_key");
-    if (savedKey) {
+    if (isAuthenticated) {
       navigate("/home");
     }
-  }, [navigate]);
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,29 +21,16 @@ export default function LoginPage() {
       return;
     }
 
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:3001/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ key }),
-      });
+    setKey("");
+    const success = await login(key);
 
-      const data = await response.json();
-
-      if (data.success) {
-        localStorage.setItem("user_key", key);
-        toast.success(data.message);
-        navigate("/home");
-      } else {
-        toast.error(data.error || "Giriş başarısız!");
-      }
-    } catch (error) {
-      toast.error("Sunucuya bağlanılamadı!");
-    } finally {
-      setLoading(false);
+    if (success) {
+      navigate("/home");
+      setTimeout(() => {
+        toast.success("Giriş başarılı");
+      }, 1100);
+    } else {
+      toast.error("Geçersiz erişim kodu!");
     }
   };
 
@@ -72,10 +59,10 @@ export default function LoginPage() {
           />
           <button
             type="submit"
-            disabled={loading}
+            disabled={authLoading}
             className="w-full bg-white/10 border border-white/10 text-white font-bold py-3 rounded-xl transition-transform active:scale-95 active:bg-purple-600/80 active:border-purple-500 flex items-center justify-center"
           >
-            {loading ? "Giriş Yapılıyor..." : "Giriş Yap"}
+            {authLoading ? "Giriş Yapılıyor..." : "Giriş Yap"}
           </button>
         </form>
       </div>

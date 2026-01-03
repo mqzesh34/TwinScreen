@@ -5,6 +5,8 @@ const DATA_DIR = path.join(__dirname, '..', 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const MOVIES_FILE = path.join(DATA_DIR, 'movies.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
+
 
 async function readJson(file) {
     try {

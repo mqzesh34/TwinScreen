@@ -15,8 +15,23 @@ router.post('/', auth, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json({ error: "Yetersiz yetki!" });
     }
-    const { users } = req.body;
-    await writeJson(USERS_FILE, users);
+    
+    const { users: newUsers } = req.body;
+    const oldUsers = await readJson(USERS_FILE);
+    const io = req.app.get('io');
+
+    newUsers.forEach(newUser => {
+        const oldUser = oldUsers.find(u => u.id === newUser.id);
+        if (oldUser) {
+            if (oldUser.key !== newUser.key || oldUser.name !== newUser.name) {
+                io.to(`user:${oldUser.key}`).emit('force_logout', {
+                    message: "Bilgileriniz yönetici tarafından güncellendi. Lütfen tekrar giriş yapın."
+                });
+            }
+        }
+    });
+
+    await writeJson(USERS_FILE, newUsers);
     res.json({ message: "Kullanıcılar güncellendi" });
 });
 

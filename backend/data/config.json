@@ -1,0 +1,4 @@
+{
+  "JWT_SECRET": "jwt_key",
+  "PORT": 3001
+}

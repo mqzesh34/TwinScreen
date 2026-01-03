@@ -1,14 +1,14 @@
 [
   {
     "id": 1,
-    "name": "Admin",
+    "name": "Yönetici",
     "role": "admin",
-    "key": "admin_key"
+    "key": "yönetici"
   },
   {
     "id": 2,
-    "name": "User",
+    "name": "Kullanıcı",
     "role": "user",
-    "key": "user_key"
+    "key": "kullanıcı"
   }
 ]
