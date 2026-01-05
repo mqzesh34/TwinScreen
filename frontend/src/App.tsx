@@ -2,6 +2,7 @@ import LoginPage from "./pages/Login";
 import Home from "./pages/Home";
 import Backstage from "./pages/Backstage";
 import Settings from "./pages/Settings";
+import PrivateRoom from "./pages/PrivateRoom";
 import {
   MemoryRouter,
   Routes,
@@ -68,43 +69,51 @@ function AnimatedRoutes() {
             path="/settings"
             element={isAuthenticated ? <Settings /> : <Navigate to="/" />}
           />
+          <Route
+            path="/private-room"
+            element={isAuthenticated ? <PrivateRoom /> : <Navigate to="/" />}
+          />
         </Routes>
       </motion.div>
     </>
   );
 }
 
+import { NotificationProvider } from "./contexts/NotificationContext";
+
 function App() {
   return (
     <AuthProvider>
       <MemoryRouter>
         <SocketProvider>
-          <Toaster
-            position="top-center"
-            reverseOrder={false}
-            containerStyle={{ zIndex: 100000 }}
-            toastOptions={{
-              style: {
-                background: "rgba(255, 255, 255, 0.05)",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "100px",
-                color: "#fff",
-                padding: "12px 24px",
-                fontSize: "14px",
-                fontWeight: "600",
-                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-              },
-              success: {
-                iconTheme: {
-                  primary: "#A855F7",
-                  secondary: "#fff",
+          <NotificationProvider>
+            <Toaster
+              position="top-center"
+              reverseOrder={false}
+              containerStyle={{ zIndex: 100000 }}
+              toastOptions={{
+                style: {
+                  background: "rgba(255, 255, 255, 0.05)",
+                  backdropFilter: "blur(20px)",
+                  WebkitBackdropFilter: "blur(20px)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: "100px",
+                  color: "#fff",
+                  padding: "12px 24px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
                 },
-              },
-            }}
-          />
-          <AnimatedRoutes />
+                success: {
+                  iconTheme: {
+                    primary: "#A855F7",
+                    secondary: "#fff",
+                  },
+                },
+              }}
+            />
+            <AnimatedRoutes />
+          </NotificationProvider>
         </SocketProvider>
       </MemoryRouter>
     </AuthProvider>

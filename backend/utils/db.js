@@ -7,7 +7,6 @@ const MOVIES_FILE = path.join(DATA_DIR, 'movies.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 
-
 async function readJson(file) {
     try {
         const data = await fs.readFile(file, 'utf8');
@@ -20,7 +19,7 @@ async function readSettings() {
         const data = await fs.readFile(SETTINGS_FILE, 'utf8');
         return JSON.parse(data);
     } catch { 
-        return { room_capacity: 2, room_name: "Sinema Odası" };
+        return {};
     }
 }
 

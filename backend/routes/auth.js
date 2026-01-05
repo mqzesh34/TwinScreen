@@ -15,6 +15,7 @@ router.post('/login', async (req, res) => {
         res.json({ 
             success: true, 
             token,
+            key: user.key,
             name: user.name, 
             role: user.role,
             message: `Hoş geldin ${user.name}` 
@@ -29,6 +30,7 @@ router.get('/validate-key', auth, async (req, res) => {
     res.json({ 
         success: true, 
         token,
+        key: req.user.key,
         name: req.user.name, 
         role: req.user.role 
     });

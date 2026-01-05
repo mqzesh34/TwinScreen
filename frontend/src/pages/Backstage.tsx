@@ -104,7 +104,7 @@ export default function Backstage() {
   return (
     <div className="p-7">
       <TopBar />
-      <div className="max-w-2xl mx-auto pt-24 space-y-6">
+      <div className="max-w-2xl mx-auto pt-24 pb-22 space-y-6">
         <div className="bg-black/40 border border-white/10 rounded-2xl overflow-hidden aspect-video">
           {currentMovie ? (
             <Player

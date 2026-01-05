@@ -4,22 +4,20 @@ const { SETTINGS_FILE, readSettings, writeJson } = require('../utils/db');
 const auth = require('../middleware/auth');
 
 router.get('/', auth, async (req, res) => {
-    const settings = await readSettings();
-    res.json(settings);
+    const allSettings = await readSettings();
+    const userSettings = allSettings[req.user.key] || { platform: "none", notifications: true };
+    if (userSettings.notifications === undefined) userSettings.notifications = true;
+    res.status(200).json(userSettings);
 });
 
 router.post('/', auth, async (req, res) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: "Ayarları sadece Admin değiştirebilir!" });
-    }
-
-    const { room_capacity, room_name } = req.body;
-    const currentSettings = await readSettings();
-
-    const newSettings = { ...currentSettings, room_capacity, room_name };
+    const { platform, notifications } = req.body;
+    const allSettings = await readSettings();
     
-    await writeJson(SETTINGS_FILE, newSettings);
-    res.json({ message: "Ayarlar güncellendi", settings: newSettings });
+    allSettings[req.user.key] = { platform, notifications };
+    
+    await writeJson(SETTINGS_FILE, allSettings);
+    res.status(200).json({ message: "Ayarlar güncellendi" });
 });
 
 module.exports = router;

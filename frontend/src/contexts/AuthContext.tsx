@@ -9,6 +9,7 @@ import {
 interface UserProfile {
   name: string;
   role: string;
+  key: string;
 }
 
 interface AuthContextType {
@@ -40,16 +41,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       if (res.ok) {
         const data = await res.json();
-        setUserProfile({ name: data.name, role: data.role });
+        setUserProfile({ name: data.name, role: data.role, key: data.key });
         if (data.token) {
           localStorage.setItem("token", data.token);
           setToken(data.token);
         }
         return true;
       }
-    } catch (err) {
-      // Sessiz hata yönetimi
-    }
+    } catch (err) {}
+
     return false;
   };
 
@@ -84,15 +84,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       if (res.ok) {
         const data = await res.json();
-        setUserProfile({ name: data.name, role: data.role });
+        setUserProfile({ name: data.name, role: data.role, key: data.key });
         localStorage.setItem("token", data.token);
         setToken(data.token);
         setIsLoading(false);
         return true;
       }
-    } catch (err) {
-      // Sessiz hata yönetimi
-    }
+    } catch (err) {}
+
     setIsLoading(false);
     return false;
   };

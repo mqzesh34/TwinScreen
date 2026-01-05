@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
 
 interface SocketContextType {
   socket: Socket | null;
@@ -23,7 +22,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         auth: {
           token: userKey,
         },
-        transports: ["websocket"], // Direkt websocket ile bağlan
+        transports: ["websocket"],
       });
 
       newSocket.on("connect", () => {
@@ -34,18 +33,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         setIsConnected(false);
       });
 
-      // Zorunlu çıkış event'ini dinle
-      newSocket.on("force_logout", (data) => {
+      newSocket.on("force_logout", () => {
         logout();
         navigate("/");
-        setTimeout(() => {
-          toast(
-            data.message || "Bilgileriniz güncellendi, tekrar giriş yapın.",
-            {
-              icon: "🔑",
-            }
-          );
-        }, 1100);
       });
 
       setSocket(newSocket);
