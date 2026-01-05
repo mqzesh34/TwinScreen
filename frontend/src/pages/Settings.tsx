@@ -177,7 +177,7 @@ export default function Settings() {
                       className={`w-full p-4 rounded-2xl border-2 transition-all font-bold text-sm uppercase tracking-wider flex flex-col items-center justify-center gap-2 ${
                         settings.platform === "web"
                           ? "bg-purple-500/20 border-purple-500 text-purple-400"
-                          : "bg-white/5 border-white/10 text-white/40 hover:border-white/20"
+                          : "bg-white/5 border-white/10 text-white hover:border-white/20"
                       }`}
                     >
                       <Globe size={24} />
@@ -197,7 +197,7 @@ export default function Settings() {
                       className={`w-full p-4 rounded-2xl border-2 transition-all font-bold text-sm uppercase tracking-wider flex flex-col items-center justify-center gap-2 ${
                         settings.platform === "mobil"
                           ? "bg-purple-500/20 border-purple-500 text-purple-400"
-                          : "bg-white/5 border-white/10 text-white/40 hover:border-white/20"
+                          : "bg-white/5 border-white/10 text-white hover:border-white/20"
                       }`}
                     >
                       <Smartphone size={24} />
@@ -292,7 +292,7 @@ export default function Settings() {
                 onClick={() => setIsAdminPanelOpen(false)}
                 className="p-2 hover:bg-white/5 rounded-xl transition-colors"
               >
-                <X size={24} className="text-white/50" />
+                <X size={24} className="text-white" />
               </button>
             </div>
 

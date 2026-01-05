@@ -36,7 +36,7 @@ export default function TopBar() {
               setIsNotificationsOpen(true);
               markAllAsRead();
             }}
-            className="relative text-white/70 hover:text-white/20 transition-all"
+            className="relative text-white hover:text-white/80 transition-all"
           >
             <Bell size={18} />
             {unreadCount > 0 && (
@@ -48,7 +48,7 @@ export default function TopBar() {
             onClick={() =>
               navigate(pathname === "/settings" ? "/home" : "/settings")
             }
-            className="text-white/70 hover:text-white/20 transition-all"
+            className="text-white hover:text-white/80 transition-all"
           >
             {pathname === "/settings" ? (
               <Home size={18} />

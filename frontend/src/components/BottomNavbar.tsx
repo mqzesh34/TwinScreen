@@ -5,7 +5,7 @@ export default function BottomNavbar() {
   const baseStyle =
     "flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-full font-medium transition-all duration-300";
   const activeStyle = `${baseStyle} text-purple-500`;
-  const passiveStyle = `${baseStyle} text-white/50 hover:text-white/80`;
+  const passiveStyle = `${baseStyle} text-white hover:text-white/80`;
 
   return (
     <div className="fixed bottom-8 left-0 right-0 flex justify-center z-50 pb-safe px-6 pointer-events-none">

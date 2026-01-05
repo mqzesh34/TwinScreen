@@ -6,7 +6,15 @@ import ConfirmModal from "../components/ConfirmModal";
 import toast from "react-hot-toast";
 import { useAuth } from "../contexts/AuthContext";
 import { useSocket } from "../contexts/SocketContext";
-import { Film, Plus, Trash2, X, Clapperboard } from "lucide-react";
+import {
+  Film,
+  Plus,
+  Trash2,
+  X,
+  Clapperboard,
+  Popcorn,
+  Users,
+} from "lucide-react";
 
 interface Movie {
   id: number;
@@ -14,6 +22,12 @@ interface Movie {
   preview_url: string;
   added_by: string;
   added_at: string;
+}
+
+interface User {
+  id: number;
+  name: string;
+  role: string;
 }
 
 export default function Backstage() {
@@ -25,6 +39,11 @@ export default function Backstage() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newVideoUrl, setNewVideoUrl] = useState("");
+
+  const [users, setUsers] = useState<User[]>([]);
+  const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
+  const [selectedMovieId, setSelectedMovieId] = useState<number | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   const { userKey, userRole, userProfile } = useAuth();
   const { socket } = useSocket();
@@ -101,6 +120,48 @@ export default function Backstage() {
     }
   };
 
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch("http://localhost:3001/users", {
+          headers: { Authorization: `Bearer ${userKey || ""}` },
+        });
+        if (res.ok) setUsers(await res.json());
+      } catch {}
+    };
+    fetchUsers();
+  }, [userRole, userKey]);
+
+  const handleCreateRoom = async () => {
+    if (!selectedMovieId || !selectedUserId)
+      return toast.error("Kullanıcı seçmelisiniz");
+
+    try {
+      const res = await fetch("http://localhost:3001/private-rooms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userKey || ""}`,
+        },
+        body: JSON.stringify({
+          movieId: selectedMovieId,
+          invitedUserId: selectedUserId,
+        }),
+      });
+
+      if (res.ok) {
+        toast.success("Özel oda oluşturuldu!");
+        setIsRoomModalOpen(false);
+        setSelectedUserId(null);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Hata");
+      }
+    } catch {
+      toast.error("Bağlantı hatası");
+    }
+  };
+
   return (
     <div className="p-7">
       <TopBar />
@@ -117,7 +178,7 @@ export default function Backstage() {
               onPause={() => setIsPlaying(false)}
             />
           ) : (
-            <div className="h-full flex items-center justify-center text-white/20">
+            <div className="h-full flex items-center justify-center text-white">
               <div className="text-center space-y-2">
                 <Clapperboard size={48} className="mx-auto" />
                 <p>Film seçilmedi</p>
@@ -161,7 +222,7 @@ export default function Backstage() {
                   className={`w-10 h-10 rounded-full flex items-center justify-center ${
                     currentMovie?.id === m.id
                       ? "bg-purple-500 text-white"
-                      : "bg-white/10 text-white/40"
+                      : "bg-white/10 text-white"
                   }`}
                 >
                   <Film size={18} />
@@ -184,17 +245,29 @@ export default function Backstage() {
                 </div>
               </div>
 
-              {(userRole === "admin" || m.added_by === userProfile?.name) && (
+              <div className="flex items-center gap-1">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setDeleteId(m.id);
+                    setSelectedMovieId(m.id);
+                    setIsRoomModalOpen(true);
                   }}
-                  className="w-10 h-10 flex items-center justify-center rounded-lg text-white/20 active:text-red-500 active:bg-red-500/20 transition-all"
+                  className="w-10 h-10 flex items-center justify-center rounded-lg text-white active:text-yellow-500 active:bg-yellow-500/20 transition-all hover:text-yellow-400"
                 >
-                  <Trash2 size={18} />
+                  <Popcorn size={18} />
                 </button>
-              )}
+                {(userRole === "admin" || m.added_by === userProfile?.name) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteId(m.id);
+                    }}
+                    className="w-10 h-10 flex items-center justify-center rounded-lg text-white active:text-red-500 active:bg-red-500/20 transition-all hover:text-red-400"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -209,7 +282,7 @@ export default function Backstage() {
               <h3 className="text-xl font-bold">Yeni Film Ekle</h3>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-white/40 p-2"
+                className="text-white p-2"
               >
                 <X size={24} />
               </button>
@@ -257,6 +330,61 @@ export default function Backstage() {
                 Ekle
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isRoomModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
+          <div className="bg-[#121212] p-6 rounded-3xl w-full max-w-md border border-white/10 space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Popcorn className="text-yellow-500" />
+                Özel Oda Oluştur
+              </h3>
+              <button
+                onClick={() => setIsRoomModalOpen(false)}
+                className="text-white p-2 hover:bg-white/5 rounded-full"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+              <p className="text-sm text-white/50">
+                Davet etmek için kullanıcı seçin:
+              </p>
+              {users
+                .filter((u) => u.name !== userProfile?.name)
+                .map((u) => (
+                  <button
+                    key={u.id}
+                    onClick={() => setSelectedUserId(u.id)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                      selectedUserId === u.id
+                        ? "bg-yellow-500/20 border-yellow-500 text-yellow-500"
+                        : "bg-white/5 border-white/10 text-white hover:bg-white/10"
+                    }`}
+                  >
+                    <Users size={18} />
+                    <span className="font-bold text-sm">{u.name}</span>
+                  </button>
+                ))}
+              {users.filter((u) => u.name !== userProfile?.name).length ===
+                0 && (
+                <div className="text-center py-4 text-white/30 text-sm">
+                  Kullanıcı bulunamadı.
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handleCreateRoom}
+              disabled={!selectedUserId}
+              className="w-full p-4 bg-yellow-600 active:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black rounded-2xl font-bold transition-all"
+            >
+              Odayı Başlat
+            </button>
           </div>
         </div>
       )}

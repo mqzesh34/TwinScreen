@@ -5,8 +5,8 @@ const auth = require('../middleware/auth');
 
 router.get('/', auth, async (req, res) => {
     const allSettings = await readSettings();
-    const userSettings = allSettings[req.user.key] || { platform: "none", notifications: true };
-    if (userSettings.notifications === undefined) userSettings.notifications = true;
+    const userSettings = allSettings[req.user.key] || { platform: "none", notifications: false };
+    if (userSettings.notifications === undefined) userSettings.notifications = false;
     res.status(200).json(userSettings);
 });
 

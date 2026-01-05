@@ -48,7 +48,7 @@ export default function NotificationsModal({
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-white transition-colors rounded-lg hover:bg-white/5"
+                className="w-8 h-8 flex items-center justify-center text-white hover:text-white/80 transition-colors rounded-lg hover:bg-white/5"
               >
                 <X size={20} />
               </button>
@@ -57,7 +57,7 @@ export default function NotificationsModal({
             <div className="max-h-[500px] overflow-y-auto">
               {notifications.length === 0 ? (
                 <div className="py-16 px-6 text-center">
-                  <Bell size={48} className="mx-auto text-white/10 mb-4" />
+                  <Bell size={48} className="mx-auto text-white mb-4" />
                   <p className="text-white/40 text-sm">
                     Henüz bildirim bulunmuyor
                   </p>
@@ -88,7 +88,7 @@ export default function NotificationsModal({
                           <p className="text-white/40 text-xs mb-2 line-clamp-2">
                             {notification.message}
                           </p>
-                          <div className="flex items-center gap-3 text-white/30 text-[10px]">
+                          <div className="flex items-center gap-3 text-white text-[10px]">
                             {notification.sender && (
                               <span className="font-bold text-white/50">
                                 {notification.sender}

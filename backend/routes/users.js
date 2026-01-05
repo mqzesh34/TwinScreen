@@ -4,11 +4,14 @@ const { USERS_FILE, readJson, writeJson, readSettings, SETTINGS_FILE } = require
 const auth = require('../middleware/auth');
 
 router.get('/', auth, async (req, res) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: "Yetersiz yetki!" });
-    }
     const users = await readJson(USERS_FILE);
-    res.json(users);
+    
+    if (req.user.role === 'admin') {
+        res.json(users);
+    } else {
+        const publicUsers = users.map(({ id, name, role }) => ({ id, name, role }));
+        res.json(publicUsers);
+    }
 });
 
 router.post('/', auth, async (req, res) => {

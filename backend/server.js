@@ -12,6 +12,7 @@ const movieRoutes = require('./routes/movies');
 const settingRoutes = require('./routes/settings');
 const userRoutes = require('./routes/users');
 const notificationRoutes = require('./routes/notifications');
+const privateRoomRoutes = require('./routes/privateRooms');
 
 const app = express();
 const server = http.createServer(app);
@@ -44,6 +45,7 @@ app.use('/movies', movieRoutes);
 app.use('/settings', settingRoutes);
 app.use('/users', userRoutes);
 app.use('/notifications', notificationRoutes);
+app.use('/private-rooms', privateRoomRoutes);
 
 io.on('connection', (socket) => {
     const token = socket.handshake.auth.token;
