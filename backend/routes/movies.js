@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { MOVIES_FILE, readJson, writeJson } = require('../utils/db');
 const auth = require('../middleware/auth');
-const { addNotification } = require('../utils/notificationManager');
+const { addNotification } = require('../services/notificationManager');
 const { SOCKET_EVENTS } = require('../utils/constants');
 
 router.get('/', auth, async (req, res) => {

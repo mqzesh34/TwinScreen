@@ -1,11 +1,13 @@
 import { NavLink } from "react-router-dom";
 import { Home, Film, Popcorn } from "lucide-react";
+import useTranslation from "../hooks/useTranslation";
 
 export default function BottomNavbar() {
   const baseStyle =
     "flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-full font-medium transition-all duration-300";
   const activeStyle = `${baseStyle} text-purple-500`;
   const passiveStyle = `${baseStyle} text-white hover:text-white/80`;
+  const { t } = useTranslation();
 
   return (
     <div className="fixed bottom-8 left-0 right-0 flex justify-center z-50 pb-safe px-6 pointer-events-none">
@@ -18,7 +20,7 @@ export default function BottomNavbar() {
         >
           <Home size={22} />
           <span className="text-[10px] uppercase tracking-wider font-bold">
-            Ana Sayfa
+            {t("nav_home")}
           </span>
         </NavLink>
 
@@ -32,7 +34,7 @@ export default function BottomNavbar() {
         >
           <Film size={22} />
           <span className="text-[10px] uppercase tracking-wider font-bold">
-            Filmler
+            {t("nav_movies")}
           </span>
         </NavLink>
 

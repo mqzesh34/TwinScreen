@@ -6,6 +6,7 @@ import { Bell, Settings, LogOut, Home } from "lucide-react";
 import ConfirmModal from "./ConfirmModal";
 import NotificationsModal from "./NotificationsModal";
 import { useNotifications } from "../contexts/NotificationContext";
+import useTranslation from "../hooks/useTranslation";
 
 export default function TopBar() {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -14,12 +15,13 @@ export default function TopBar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { logout } = useAuth();
+  const { t } = useTranslation();
 
   const handleLogout = () => {
     logout();
     navigate("/");
     setTimeout(() => {
-      toast.success("Çıkış yapıldı");
+      toast.success(t("topbar_logout_success"));
     }, 1100);
   };
 
@@ -68,9 +70,9 @@ export default function TopBar() {
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
         onConfirm={handleLogout}
-        title="Oturumu Kapat?"
-        description="Mevcut oturumunuz sonlandırılacak. Devam etmek istiyor musunuz?"
-        confirmText="Çıkış Yap"
+        title={t("confirm_logout_title")}
+        description={t("confirm_logout_desc")}
+        confirmText={t("confirm_logout_btn")}
         variant="danger"
         icon={<LogOut size={32} className="text-red-500" />}
       />

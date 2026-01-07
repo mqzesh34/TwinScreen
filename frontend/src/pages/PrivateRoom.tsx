@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import ReactPlayer from "react-player";
+import YouTubeSyncPlayer from "../components/YouTubeSyncPlayer";
 import TopBar from "../components/TopBar";
 import BottomNavbar from "../components/BottomNavbar";
 import { useAuth } from "../contexts/AuthContext";
@@ -7,6 +7,7 @@ import { useSocket } from "../contexts/SocketContext";
 import { Popcorn, Play, ArrowLeft, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import ConfirmModal from "../components/ConfirmModal";
+import useTranslation from "../hooks/useTranslation";
 
 interface Room {
   id: number;
@@ -17,14 +18,20 @@ interface Room {
   invitedUser: string;
   createdAt: string;
 }
+const getVideoId = (url: string): string | null => {
+  const youtubeRegex =
+    /(?:https?:\/\/)?(?:www\.)?(?:m\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=|embed\/|v\/|)([\w-]{11})(?:\S+)?/;
+  const match = url.match(youtubeRegex);
+  return match ? match[1] : null;
+};
 
 export default function PrivateRoom() {
-  const Player = ReactPlayer;
   const [rooms, setRooms] = useState<Room[]>([]);
   const [activeRoom, setActiveRoom] = useState<Room | null>(null);
   const [deleteRoomId, setDeleteRoomId] = useState<number | null>(null);
-  const { userKey, userProfile } = useAuth();
+  const { userKey } = useAuth();
   const { socket } = useSocket();
+  const { t } = useTranslation();
 
   const fetchRooms = async () => {
     try {
@@ -67,53 +74,52 @@ export default function PrivateRoom() {
         }
       );
       if (res.ok) {
-        toast.success("Oda kapatıldı");
+        toast.success(t("private_rooms_delete_success"));
         fetchRooms();
         if (activeRoom?.id === deleteRoomId) setActiveRoom(null);
         setDeleteRoomId(null);
       } else {
-        toast.error("Silinemedi");
+        toast.error(t("private_rooms_delete_error"));
       }
     } catch {
-      toast.error("Hata");
+      toast.error(t("private_rooms_error"));
     }
   };
 
   return (
-    <div className="p-7 min-h-screen pb-32">
-      <TopBar />
+    <div className={`min-h-screen ${activeRoom ? "bg-black" : "p-7 pb-32"}`}>
+      {!activeRoom && <TopBar />}
 
-      <div className="max-w-2xl mx-auto pt-24 space-y-6">
-        {activeRoom ? (
-          <div className="space-y-4">
-            <button
-              onClick={() => setActiveRoom(null)}
-              className="flex items-center gap-2 text-white hover:text-white/80 transition-colors"
-            >
-              <ArrowLeft size={20} />
-              Odadan Ayrıl
-            </button>
-
-            <div className="bg-black/40 border border-white/10 rounded-2xl overflow-hidden aspect-video relative group">
-              <Player
-                src={activeRoom.movieUrl}
-                width="100%"
-                height="100%"
-                controls
-                playing
-              />
-            </div>
-          </div>
-        ) : (
+      {activeRoom ? (
+        <div className="fixed inset-0 z-50 bg-black">
+          <button
+            onClick={() => setActiveRoom(null)}
+            className="absolute top-6 left-6 z-[60] bg-black/50 p-3 rounded-full text-white hover:bg-black/70 backdrop-blur-md transition-all group border border-white/10"
+          >
+            <ArrowLeft
+              size={24}
+              className="group-hover:-translate-x-1 transition-transform"
+            />
+          </button>
+          <YouTubeSyncPlayer
+            roomId={`private_${activeRoom.id}`}
+            initialVideoId={getVideoId(activeRoom.movieUrl) || ""}
+            onExit={() => setActiveRoom(null)}
+          />
+        </div>
+      ) : (
+        <div className="max-w-2xl mx-auto pt-24 space-y-6">
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-purple-500/20 rounded-2xl text-purple-400">
                 <Popcorn size={32} />
               </div>
               <div>
-                <h2 className="text-2xl font-bold">Özel Odalar</h2>
+                <h2 className="text-2xl font-bold">
+                  {t("private_rooms_title")}
+                </h2>
                 <p className="text-sm text-white/40">
-                  Size özel davetler ve aktif odalar
+                  {t("private_rooms_subtitle")}
                 </p>
               </div>
             </div>
@@ -122,9 +128,7 @@ export default function PrivateRoom() {
               {rooms.length === 0 ? (
                 <div className="text-center py-16 text-white bg-white/5 rounded-3xl border border-dashed border-white/10">
                   <Popcorn size={48} className="mx-auto mb-3" />
-                  <p className="text-white/50">
-                    Henüz aktif bir oda veya davet yok.
-                  </p>
+                  <p className="text-white/50">{t("private_rooms_empty")}</p>
                 </div>
               ) : (
                 rooms.map((room) => (
@@ -137,33 +141,6 @@ export default function PrivateRoom() {
 
                     <div className="space-y-1 relative z-10">
                       <h3 className="font-bold text-lg">{room.movieTitle}</h3>
-                      <div className="text-xs text-white/40 flex items-center">
-                        {userProfile?.name === room.creator ? (
-                          <>
-                            <span className="text-purple-400 font-bold mr-1">
-                              {room.invitedUser}
-                            </span>{" "}
-                            kişisini davet ettin
-                          </>
-                        ) : userProfile?.name === room.invitedUser ? (
-                          <>
-                            <span className="text-purple-400 font-bold mr-1">
-                              {room.creator}
-                            </span>{" "}
-                            tarafından davet edildin
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-white/60 mr-1">
-                              {room.creator}
-                            </span>
-                            <span className="mx-1">→</span>
-                            <span className="text-white/60">
-                              {room.invitedUser}
-                            </span>
-                          </>
-                        )}
-                      </div>
                     </div>
 
                     <div className="flex items-center gap-3 relative z-10">
@@ -183,18 +160,18 @@ export default function PrivateRoom() {
               )}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      <BottomNavbar />
+      {!activeRoom && <BottomNavbar />}
 
       <ConfirmModal
         isOpen={!!deleteRoomId}
         onClose={() => setDeleteRoomId(null)}
         onConfirm={confirmDelete}
-        title="Odayı Kapat"
-        description="Bu oda tüm katılımcılar için kapanacaktır. Emin misiniz?"
-        confirmText="Kapat"
+        title={t("private_rooms_confirm_delete_title")}
+        description={t("private_rooms_confirm_delete_desc")}
+        confirmText={t("private_rooms_confirm_delete_btn")}
         variant="danger"
         icon={<Trash2 size={32} className="text-red-500" />}
       />

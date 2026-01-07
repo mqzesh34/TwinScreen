@@ -9,7 +9,15 @@ const SOCKET_EVENTS = {
     CHANGE_MOVIE: 'change_movie',
     MOVIES_UPDATED: 'movies_updated',
     PRIVATE_ROOMS_UPDATED: 'private_rooms_updated',
-    NEW_NOTIFICATION: 'new_notification'
+    NEW_NOTIFICATION: 'new_notification',
+    JOIN_VIDEO_ROOM: 'join_video_room',
+    VIDEO_SYNC: 'video:sync',
+    COUNTDOWN: 'video:countdown',
+    HEARTBEAT: 'video:heartbeat',
+    SYNC_STATUS: 'video:sync_status',
+    FORCE_SYNC: 'video:force_sync',
+    LEAVE_VIDEO_ROOM: 'leave_video_room',
+    SEND_ROOM_NOTIFICATION: 'send_room_notification'
 };
 
 module.exports = {

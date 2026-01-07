@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const { getNotifications, markAllRead, clearNotifications } = require('../utils/notificationManager');
+const { getNotifications, markAllRead, clearNotifications } = require('../services/notificationManager');
 
 router.get('/', auth, async (req, res) => {
     res.json(await getNotifications(req.user.key));

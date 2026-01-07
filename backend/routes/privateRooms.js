@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { readJson, writeJson, PRIVATE_ROOMS_FILE, MOVIES_FILE, USERS_FILE } = require('../utils/db');
-const { addNotification } = require('../utils/notificationManager');
+const { addNotification } = require('../services/notificationManager');
 const { SOCKET_EVENTS } = require('../utils/constants');
 const auth = require('../middleware/auth');
 

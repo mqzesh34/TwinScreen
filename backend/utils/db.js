@@ -1,27 +1,41 @@
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const MOVIES_FILE = path.join(DATA_DIR, 'movies.json');
-const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
-const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
-const NOTIFICATIONS_FILE = path.join(DATA_DIR, 'notifications.json');
-const PRIVATE_ROOMS_FILE = path.join(DATA_DIR, 'privateRooms.json');
+
+const DB_FILES = {
+    USERS: path.join(DATA_DIR, 'users.json'),
+    MOVIES: path.join(DATA_DIR, 'movies.json'),
+    SETTINGS: path.join(DATA_DIR, 'settings.json'),
+    CONFIG: path.join(DATA_DIR, 'config.json'),
+    NOTIFICATIONS: path.join(DATA_DIR, 'notifications.json'),
+    PRIVATE_ROOMS: path.join(DATA_DIR, 'privateRooms.json'),
+    PLAYBACK_STATE: path.join(DATA_DIR, 'playbackState.json')
+};
+
+const DEFAULT_CONTENTS = {
+    [DB_FILES.USERS]: [],
+    [DB_FILES.MOVIES]: [],
+    [DB_FILES.SETTINGS]: {},
+    [DB_FILES.NOTIFICATIONS]: [],
+    [DB_FILES.PRIVATE_ROOMS]: [],
+    [DB_FILES.PLAYBACK_STATE]: {
+        public: {
+            videoId: "",
+            time: 0,
+            isPlaying: false,
+            lastUpdated: Date.now()
+        }
+    }
+};
 
 async function readJson(file) {
     try {
         const data = await fs.readFile(file, 'utf8');
         return JSON.parse(data);
-    } catch { return []; }
-}
-
-async function readSettings() {
-    try {
-        const data = await fs.readFile(SETTINGS_FILE, 'utf8');
-        return JSON.parse(data);
     } catch { 
-        return {};
+        return Array.isArray(DEFAULT_CONTENTS[file]) ? [] : (DEFAULT_CONTENTS[file] || {}); 
     }
 }
 
@@ -30,17 +44,36 @@ async function writeJson(file, data) {
 }
 
 async function ensureDataDir() {
-    try { await fs.access(DATA_DIR); } catch { await fs.mkdir(DATA_DIR); }
+    try {
+        if (!fsSync.existsSync(DATA_DIR)) {
+            await fs.mkdir(DATA_DIR, { recursive: true });
+        }
+
+        for (const [file, content] of Object.entries(DEFAULT_CONTENTS)) {
+            if (!fsSync.existsSync(file)) {
+                await writeJson(file, content);
+            }
+        }
+    } catch (err) {
+        console.error("[DB] Initialization Error:", err.message);
+    }
+}
+
+async function readSettings() {
+    return readJson(DB_FILES.SETTINGS);
 }
 
 module.exports = {
-    USERS_FILE,
-    MOVIES_FILE,
-    SETTINGS_FILE,
-    NOTIFICATIONS_FILE,
-    PRIVATE_ROOMS_FILE,
+    ...DB_FILES,
+    USERS_FILE: DB_FILES.USERS,
+    MOVIES_FILE: DB_FILES.MOVIES,
+    SETTINGS_FILE: DB_FILES.SETTINGS,
+    NOTIFICATIONS_FILE: DB_FILES.NOTIFICATIONS,
+    PRIVATE_ROOMS_FILE: DB_FILES.PRIVATE_ROOMS,
+    PLAYBACK_STATE_FILE: DB_FILES.PLAYBACK_STATE,
     readJson,
-    readSettings,
     writeJson,
-    ensureDataDir
+    ensureDataDir,
+    readSettings,
+    DATA_DIR
 };

@@ -13,7 +13,9 @@ import {
   Bell,
   Shield,
   X,
+  Languages,
 } from "lucide-react";
+import useTranslation from "../hooks/useTranslation";
 
 interface User {
   id: number;
@@ -38,6 +40,7 @@ export default function Settings() {
     notifications: false,
   });
   const [users, setUsers] = useState<User[]>([]);
+  const { lang, changeLanguage, t } = useTranslation();
 
   const fetchSettings = async () => {
     try {
@@ -75,7 +78,10 @@ export default function Settings() {
     fetchUsers();
   }, []);
 
-  const handleUpdateSettings = async () => {
+  const toggleNotifications = async () => {
+    const newStatus = !settings.notifications;
+    setSettings({ ...settings, notifications: newStatus });
+
     try {
       const res = await fetch("http://localhost:3001/settings", {
         method: "POST",
@@ -84,12 +90,12 @@ export default function Settings() {
           Authorization: `Bearer ${userKey || ""}`,
         },
         body: JSON.stringify({
-          notifications: settings.notifications,
+          notifications: newStatus,
         }),
       });
       if (res.ok) {
-        const data = await res.json();
-        toast.success(data.message);
+        // const data = await res.json();
+        toast.success(t("common_success"));
       }
     } catch (res: any) {
       const data = await res.json();
@@ -108,8 +114,8 @@ export default function Settings() {
         body: JSON.stringify({ users }),
       });
       if (res.ok) {
-        const data = await res.json();
-        toast.success(data.message);
+        // const data = await res.json();
+        toast.success(t("common_success"));
       }
     } catch (res: any) {
       const data = await res.json();
@@ -135,7 +141,7 @@ export default function Settings() {
     if (userToDeleteId) {
       setUsers(users.filter((u) => u.id !== userToDeleteId));
       setUserToDeleteId(null);
-      toast.success("Kullanıcı listeden kaldırıldı");
+      toast.success(t("common_success"));
     }
   };
 
@@ -143,7 +149,7 @@ export default function Settings() {
     logout();
     navigate("/");
     setTimeout(() => {
-      toast.success("Çıkış yapıldı");
+      toast.success(t("topbar_logout_success"));
     }, 1100);
   };
 
@@ -155,55 +161,76 @@ export default function Settings() {
           <section className="space-y-6">
             <div className="flex items-center gap-3 pb-4 border-b border-white/10">
               <SettingsIcon size={24} className="text-purple-500" />
-              <h2 className="text-2xl font-bold">Genel Ayarlar</h2>
+              <h2 className="text-2xl font-bold">
+                {t("settings_general_title")}
+              </h2>
             </div>
 
             <div className="space-y-6">
               <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-xl bg-purple-500/20 text-purple-400`}
-                    >
-                      <Bell size={20} />
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Notifications */}
+                  <div className="flex flex-col justify-between p-4 bg-white/5 border border-white/10 rounded-2xl h-full">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400">
+                        <Bell size={20} />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm">
+                          {t("settings_notifications_title")}
+                        </div>
+                        <div className="text-[10px] text-white/40 font-medium leading-tight">
+                          {t("settings_notifications_desc")}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-bold text-sm">
-                        Uygulama Dışı Bildirimler
-                      </div>
-                      <div className="text-[10px] text-white/40 font-medium">
-                        Uygulama kapalıyken bile gelişmelerden haberdar ol
-                      </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        onClick={toggleNotifications}
+                        className={`w-12 h-7 rounded-full transition-all relative ${
+                          settings.notifications
+                            ? "bg-purple-500"
+                            : "bg-white/10"
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-lg ${
+                            settings.notifications ? "left-6" : "left-1"
+                          }`}
+                        />
+                      </button>
                     </div>
                   </div>
 
+                  {/* Language */}
                   <button
-                    onClick={() =>
-                      setSettings({
-                        ...settings,
-                        notifications: !settings.notifications,
-                      })
-                    }
-                    className={`w-12 h-7 rounded-full transition-all relative ${
-                      settings.notifications ? "bg-purple-500" : "bg-white/10"
-                    }`}
+                    onClick={() => changeLanguage(lang === "tr" ? "en" : "tr")}
+                    className="flex flex-col justify-between p-4 bg-white/5 border border-white/10 rounded-2xl h-full hover:bg-white/10 transition-colors text-left group"
                   >
-                    <div
-                      className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-lg ${
-                        settings.notifications ? "left-6" : "left-1"
-                      }`}
-                    />
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 rounded-xl bg-blue-500/20 text-blue-400">
+                        <Languages size={20} />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm">
+                          {t("settings_language_title")}
+                        </div>
+                        <div className="text-[10px] text-white/40 font-medium leading-tight group-hover:text-white/60">
+                          {lang === "tr" ? "Türkçe" : "English"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end w-full">
+                      <div className="px-3 py-1 bg-white/10 rounded-lg text-xs font-bold uppercase tracking-wider text-blue-400">
+                        {lang}
+                      </div>
+                    </div>
                   </button>
                 </div>
               </div>
             </div>
-
-            <button
-              onClick={handleUpdateSettings}
-              className="w-full bg-purple-600 active:bg-purple-500 text-white font-bold py-4 rounded-2xl transition-all"
-            >
-              Ayarları Kaydet
-            </button>
           </section>
           <div className="flex gap-3">
             {userRole === "admin" && (
@@ -212,7 +239,7 @@ export default function Settings() {
                 className="flex-1 flex items-center justify-center gap-2 bg-blue-500/10 active:bg-blue-500/20 text-blue-500 border border-blue-500/20 font-bold py-4 rounded-2xl transition-all"
               >
                 <Shield size={20} />
-                Yönetici Paneli
+                {t("settings_admin_panel_btn")}
               </button>
             )}
             <button
@@ -222,7 +249,7 @@ export default function Settings() {
               } flex items-center justify-center gap-2 bg-red-500/10 active:bg-red-500/20 text-red-500 border border-red-500/20 font-bold py-4 rounded-2xl transition-all`}
             >
               <LogOut size={20} />
-              Oturumu Kapat
+              {t("confirm_logout_btn")}
             </button>
           </div>
         </div>
@@ -234,7 +261,7 @@ export default function Settings() {
             <div className="flex items-center justify-between p-6 border-b border-white/10 shrink-0">
               <div className="flex items-center gap-3">
                 <Shield size={24} className="text-blue-500" />
-                <h2 className="text-xl font-bold">Yönetici Paneli</h2>
+                <h2 className="text-xl font-bold">{t("admin_panel_title")}</h2>
               </div>
               <button
                 onClick={() => setIsAdminPanelOpen(false)}
@@ -250,7 +277,7 @@ export default function Settings() {
                   <div className="flex items-center gap-3">
                     <Users size={20} className="text-blue-400" />
                     <h3 className="text-lg font-bold text-white/90">
-                      Kullanıcı Listesi
+                      {t("admin_users_title")}
                     </h3>
                   </div>
                   <button
@@ -258,7 +285,7 @@ export default function Settings() {
                     className="flex items-center gap-2 bg-blue-500/10 active:bg-blue-500/20 text-blue-500 border border-blue-500/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
                   >
                     <UserPlus size={16} />
-                    Yeni Ekle
+                    {t("admin_add_new_btn")}
                   </button>
                 </div>
 
@@ -273,7 +300,7 @@ export default function Settings() {
                         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                           <div className="flex-1 w-full space-y-1">
                             <label className="text-[10px] text-white/30 uppercase font-bold pl-1">
-                              İsim
+                              {t("admin_user_name")}
                             </label>
                             <input
                               type="text"
@@ -291,7 +318,7 @@ export default function Settings() {
 
                           <div className="flex-1 w-full space-y-1">
                             <label className="text-[10px] text-white/30 uppercase font-bold pl-1">
-                              Erişim Kodu
+                              {t("admin_access_code")}
                             </label>
                             <input
                               type="text"
@@ -317,7 +344,7 @@ export default function Settings() {
 
                   {users.filter((u) => u.role !== "admin").length === 0 && (
                     <div className="text-center py-8 text-white/20 text-sm">
-                      Henüz hiç kullanıcı eklenmemiş.
+                      {t("admin_no_users")}
                     </div>
                   )}
                 </div>
@@ -332,7 +359,7 @@ export default function Settings() {
                 }}
                 className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-900/20"
               >
-                Değişiklikleri Kaydet
+                {t("admin_save_changes_btn")}
               </button>
             </div>
           </div>
@@ -343,9 +370,9 @@ export default function Settings() {
         isOpen={!!userToDeleteId}
         onClose={() => setUserToDeleteId(null)}
         onConfirm={handleConfirmDeleteUser}
-        title="Kullanıcı Silinsin mi?"
-        description="Bu kullanıcıyı listeden kaldırmak istediğinizden emin misiniz? Değişikliklerin kalıcı olması için kaydetmeyi unutmayın."
-        confirmText="Sil"
+        title={t("admin_delete_user_title")}
+        description={t("admin_delete_user_desc")}
+        confirmText={t("admin_delete_btn")}
         variant="danger"
         icon={<Trash2 size={32} className="text-red-500" />}
       />
@@ -354,9 +381,9 @@ export default function Settings() {
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
         onConfirm={handleLogout}
-        title="Oturumu Kapat?"
-        description="Mevcut oturumunuz sonlandırılacak. Devam etmek istiyor musunuz?"
-        confirmText="Çıkış Yap"
+        title={t("confirm_logout_title")}
+        description={t("confirm_logout_desc")}
+        confirmText={t("confirm_logout_btn")}
         variant="danger"
         icon={<LogOut size={32} className="text-red-500" />}
       />

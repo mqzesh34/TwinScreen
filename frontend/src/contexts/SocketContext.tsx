@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 interface SocketContextType {
   socket: Socket | null;
@@ -37,6 +38,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         logout();
         navigate("/");
       });
+
+      newSocket.on(
+        "custom_toast",
+        (data: { message: string; icon?: string }) => {
+          toast(data.message, { icon: data.icon });
+        }
+      );
 
       setSocket(newSocket);
 

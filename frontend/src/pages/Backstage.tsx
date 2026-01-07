@@ -6,6 +6,7 @@ import ConfirmModal from "../components/ConfirmModal";
 import toast from "react-hot-toast";
 import { useAuth } from "../contexts/AuthContext";
 import { useSocket } from "../contexts/SocketContext";
+import useTranslation from "../hooks/useTranslation";
 import {
   Film,
   Plus,
@@ -47,6 +48,7 @@ export default function Backstage() {
 
   const { userKey, userRole, userProfile } = useAuth();
   const { socket } = useSocket();
+  const { t } = useTranslation();
   const isFetched = useRef(false);
 
   const fetchMovies = async () => {
@@ -58,7 +60,7 @@ export default function Backstage() {
       const data = await res.json();
       if (res.ok) setMovies(data);
     } catch (err) {
-      toast.error("Hata!");
+      toast.error(t("common_error"));
     }
   };
 
@@ -81,7 +83,7 @@ export default function Backstage() {
   }, [socket]);
 
   const handleAddMovie = async () => {
-    if (!newTitle || !newVideoUrl) return toast.error("Eksik alan!");
+    if (!newTitle || !newVideoUrl) return toast.error(t("common_error"));
     try {
       const res = await fetch("http://localhost:3001/movies", {
         method: "POST",
@@ -93,13 +95,13 @@ export default function Backstage() {
         body: JSON.stringify({ title: newTitle, preview_url: newVideoUrl }),
       });
       if (res.ok) {
-        toast.success("Eklendi");
+        toast.success(t("common_success"));
         setIsAddModalOpen(false);
         setNewTitle("");
         setNewVideoUrl("");
       }
     } catch (err) {
-      toast.error("Hata!");
+      toast.error(t("common_error"));
     }
   };
 
@@ -112,11 +114,11 @@ export default function Backstage() {
       });
 
       if (res.ok) {
-        toast.success("Silindi");
+        toast.success(t("common_success"));
         setDeleteId(null);
       }
     } catch (err) {
-      toast.error("Hata!");
+      toast.error(t("common_error"));
     }
   };
 
@@ -134,7 +136,7 @@ export default function Backstage() {
 
   const handleCreateRoom = async () => {
     if (!selectedMovieId || !selectedUserId)
-      return toast.error("Kullanıcı seçmelisiniz");
+      return toast.error(t("common_error"));
 
     try {
       const res = await fetch("http://localhost:3001/private-rooms", {
@@ -150,15 +152,15 @@ export default function Backstage() {
       });
 
       if (res.ok) {
-        toast.success("Özel oda oluşturuldu!");
+        toast.success(t("backstage_create_room_title")); // Using title as success message contextually works or add new key
         setIsRoomModalOpen(false);
         setSelectedUserId(null);
       } else {
         const data = await res.json();
-        toast.error(data.error || "Hata");
+        toast.error(data.error || t("common_error"));
       }
     } catch {
-      toast.error("Bağlantı hatası");
+      toast.error(t("common_error"));
     }
   };
 
@@ -181,7 +183,7 @@ export default function Backstage() {
             <div className="h-full flex items-center justify-center text-white">
               <div className="text-center space-y-2">
                 <Clapperboard size={48} className="mx-auto" />
-                <p>Film seçilmedi</p>
+                <p>{t("backstage_no_movie_selected")}</p>
               </div>
             </div>
           )}
@@ -189,9 +191,12 @@ export default function Backstage() {
 
         <div className="flex justify-between items-end pb-4 border-b border-white/10">
           <div>
-            <h2 className="text-2xl font-bold">Film Arşivi</h2>
+            <h2 className="text-2xl font-bold">{t("backstage_title")}</h2>
             <p className="text-white/40 text-sm mt-1">
-              Toplam {movies.length} film
+              {t("backstage_total_movies").replace(
+                "{{count}}",
+                movies.length.toString()
+              )}
             </p>
           </div>
           <button
@@ -199,7 +204,7 @@ export default function Backstage() {
             className="flex items-center gap-2 bg-white/10 active:bg-white/20 border border-white/10 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
           >
             <Plus size={18} />
-            Film Ekle
+            {t("backstage_add_movie_btn")}
           </button>
         </div>
 
@@ -237,7 +242,7 @@ export default function Backstage() {
                   </span>
                   <span className="text-[10px] text-white/30 uppercase tracking-wider font-bold">
                     {m.added_by} •{" "}
-                    {new Date(m.added_at).toLocaleDateString("tr-TR", {
+                    {new Date(m.added_at).toLocaleDateString(undefined, {
                       day: "numeric",
                       month: "long",
                     })}
@@ -279,7 +284,9 @@ export default function Backstage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
           <div className="bg-[#121212] p-6 rounded-3xl w-full max-w-md border border-white/10 space-y-6">
             <div className="flex justify-between items-center">
-              <h3 className="text-xl font-bold">Yeni Film Ekle</h3>
+              <h3 className="text-xl font-bold">
+                {t("backstage_add_movie_title")}
+              </h3>
               <button
                 onClick={() => setIsAddModalOpen(false)}
                 className="text-white p-2"
@@ -291,7 +298,7 @@ export default function Backstage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-xs text-white/40 mb-1.5 uppercase">
-                  Film Başlığı
+                  {t("backstage_movie_title_label")}
                 </label>
                 <input
                   type="text"
@@ -304,7 +311,7 @@ export default function Backstage() {
 
               <div>
                 <label className="block text-xs text-white/40 mb-1.5 uppercase">
-                  Video URL
+                  {t("backstage_video_url_label")}
                 </label>
                 <input
                   type="text"
@@ -321,13 +328,13 @@ export default function Backstage() {
                 onClick={() => setIsAddModalOpen(false)}
                 className="flex-1 p-4 bg-white/5 border border-white/5 text-white rounded-2xl font-bold"
               >
-                İptal
+                {t("backstage_cancel_btn")}
               </button>
               <button
                 onClick={handleAddMovie}
                 className="flex-1 p-4 bg-purple-600 active:bg-purple-500 text-white rounded-2xl font-bold transition-all"
               >
-                Ekle
+                {t("backstage_add_btn")}
               </button>
             </div>
           </div>
@@ -340,7 +347,7 @@ export default function Backstage() {
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-bold flex items-center gap-2">
                 <Popcorn className="text-yellow-500" />
-                Özel Oda Oluştur
+                {t("backstage_create_room_title")}
               </h3>
               <button
                 onClick={() => setIsRoomModalOpen(false)}
@@ -352,7 +359,7 @@ export default function Backstage() {
 
             <div className="space-y-4 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
               <p className="text-sm text-white/50">
-                Davet etmek için kullanıcı seçin:
+                {t("backstage_select_user_label")}
               </p>
               {users
                 .filter((u) => u.name !== userProfile?.name)
@@ -373,7 +380,7 @@ export default function Backstage() {
               {users.filter((u) => u.name !== userProfile?.name).length ===
                 0 && (
                 <div className="text-center py-4 text-white/30 text-sm">
-                  Kullanıcı bulunamadı.
+                  {t("backstage_no_users_found")}
                 </div>
               )}
             </div>
@@ -383,7 +390,7 @@ export default function Backstage() {
               disabled={!selectedUserId}
               className="w-full p-4 bg-yellow-600 active:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black rounded-2xl font-bold transition-all"
             >
-              Odayı Başlat
+              {t("backstage_start_room_btn")}
             </button>
           </div>
         </div>
@@ -393,9 +400,9 @@ export default function Backstage() {
         isOpen={!!deleteId}
         onClose={() => setDeleteId(null)}
         onConfirm={confirmDelete}
-        title="Emin misiniz?"
-        description="Bu film arşivden kalıcı olarak silinecektir. Bu işlem geri alınamaz."
-        confirmText="Sil"
+        title={t("backstage_delete_movie_title")}
+        description={t("backstage_delete_movie_desc")}
+        confirmText={t("common_delete")}
         variant="danger"
         icon={<Trash2 size={32} className="text-red-500" />}
       />

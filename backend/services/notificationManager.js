@@ -1,5 +1,5 @@
-const { readJson, writeJson, NOTIFICATIONS_FILE } = require('./db');
-const { SOCKET_EVENTS } = require('./constants');
+const { readJson, writeJson, NOTIFICATIONS_FILE } = require('../utils/db');
+const { SOCKET_EVENTS } = require('../utils/constants');
 
 const getNotifications = async (userKey = null) => {
     try {

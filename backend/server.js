@@ -3,9 +3,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const { ensureDataDir } = require('./utils/db');
-const { addNotification } = require('./utils/notificationManager');
 const config = require('./data/config.json');
-const jwt = require('jsonwebtoken');
 
 const authRoutes = require('./routes/auth');
 const movieRoutes = require('./routes/movies');
@@ -13,6 +11,8 @@ const settingRoutes = require('./routes/settings');
 const userRoutes = require('./routes/users');
 const notificationRoutes = require('./routes/notifications');
 const privateRoomRoutes = require('./routes/privateRooms');
+
+const setupSocketHandlers = require('./services/socketHandlers');
 
 const app = express();
 const server = http.createServer(app);
@@ -47,55 +47,7 @@ app.use('/users', userRoutes);
 app.use('/notifications', notificationRoutes);
 app.use('/private-rooms', privateRoomRoutes);
 
-const { SOCKET_EVENTS } = require('./utils/constants');
-
-io.on(SOCKET_EVENTS.CONNECTION, (socket) => {
-    const token = socket.handshake.auth.token;
-    
-    if (token) {
-        try {
-            const decoded = jwt.verify(token, config.JWT_SECRET);
-            const userKeyRoom = `user:${decoded.key}`;
-            
-            socket.userData = {
-                name: decoded.name,
-                key: decoded.key
-            };
-
-            socket.join(userKeyRoom);
-            console.log(`🟢 [KATILDI] ${socket.userData.name}`);
-
-            socket.on(SOCKET_EVENTS.SEND_MESSAGE, async (messageData) => {
-                io.emit(SOCKET_EVENTS.RECEIVE_MESSAGE, messageData);
-                await addNotification(io, "Yeni Mesaj", `${messageData.text}`, socket.userData.name, socket.userData.key);
-            });
-
-            socket.on(SOCKET_EVENTS.PLAY_VIDEO, (data) => {
-                socket.broadcast.emit(SOCKET_EVENTS.PLAY_VIDEO, data);
-            });
-
-            socket.on(SOCKET_EVENTS.PAUSE_VIDEO, (data) => {
-                socket.broadcast.emit(SOCKET_EVENTS.PAUSE_VIDEO, data);
-            });
-
-            socket.on(SOCKET_EVENTS.SEEK_VIDEO, (data) => {
-                socket.broadcast.emit(SOCKET_EVENTS.SEEK_VIDEO, data);
-            });
-
-            socket.on(SOCKET_EVENTS.CHANGE_MOVIE, (movieTitle) => {
-                io.emit(SOCKET_EVENTS.CHANGE_MOVIE, movieTitle);
-            });
-        } catch (err) {
-            console.log('⚠️ Geçersiz token');
-        }
-    }
-
-    socket.on(SOCKET_EVENTS.DISCONNECT, () => {
-        if (socket.userData) {
-            console.log(`🔴 [AYRILDI] ${socket.userData.name}`);
-        }
-    });
-});
+setupSocketHandlers(io);
 
 server.listen(PORT, () => {
     console.log(`🚀 Server çalışıyor: http://localhost:${PORT}`);
