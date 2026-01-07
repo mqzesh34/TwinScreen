@@ -1,14 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { readJson, writeJson } = require('../utils/db');
+const { readJson, writeJson, PRIVATE_ROOMS_FILE, MOVIES_FILE, USERS_FILE } = require('../utils/db');
 const { addNotification } = require('../utils/notificationManager');
-const path = require('path');
+const { SOCKET_EVENTS } = require('../utils/constants');
 const auth = require('../middleware/auth');
-
-const DATA_DIR = path.join(__dirname, '..', 'data');
-const PRIVATE_ROOMS_FILE = path.join(DATA_DIR, 'privateRooms.json');
-const MOVIES_FILE = path.join(DATA_DIR, 'movies.json');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
 router.get('/', auth, async (req, res) => {
     try {
@@ -56,9 +51,9 @@ router.post('/', auth, async (req, res) => {
         res.status(201).json(newRoom);
         
         const io = req.app.get('io');
-        io.emit('private_rooms_updated');
+        io.emit(SOCKET_EVENTS.PRIVATE_ROOMS_UPDATED);
 
-        addNotification(
+        await addNotification(
             io, 
             "Özel Oda Daveti", 
             `${req.user.name}, "${movie.title}" filmi için bir oda oluşturdu.`,
@@ -90,9 +85,9 @@ router.delete('/:id', auth, async (req, res) => {
         res.json({ message: "Oda silindi" });
 
         const io = req.app.get('io');
-        io.emit('private_rooms_updated');
+        io.emit(SOCKET_EVENTS.PRIVATE_ROOMS_UPDATED);
 
-        addNotification(
+        await addNotification(
             io,
             "Özel Oda Kapatıldı",
             `${req.user.name}, "${room.movieTitle}" odasını kapattı.`,

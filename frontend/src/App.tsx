@@ -92,18 +92,7 @@ function App() {
               reverseOrder={false}
               containerStyle={{ zIndex: 100000 }}
               toastOptions={{
-                style: {
-                  background: "rgba(255, 255, 255, 0.05)",
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                  borderRadius: "100px",
-                  color: "#fff",
-                  padding: "12px 24px",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-                },
+                className: "custom-toast",
                 success: {
                   iconTheme: {
                     primary: "#A855F7",

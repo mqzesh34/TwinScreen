@@ -47,7 +47,9 @@ app.use('/users', userRoutes);
 app.use('/notifications', notificationRoutes);
 app.use('/private-rooms', privateRoomRoutes);
 
-io.on('connection', (socket) => {
+const { SOCKET_EVENTS } = require('./utils/constants');
+
+io.on(SOCKET_EVENTS.CONNECTION, (socket) => {
     const token = socket.handshake.auth.token;
     
     if (token) {
@@ -63,32 +65,32 @@ io.on('connection', (socket) => {
             socket.join(userKeyRoom);
             console.log(`🟢 [KATILDI] ${socket.userData.name}`);
 
-            socket.on("send_message", (messageData) => {
-                io.emit("receive_message", messageData);
-                addNotification(io, "Yeni Mesaj", `${messageData.text}`, socket.userData.name, socket.userData.key);
+            socket.on(SOCKET_EVENTS.SEND_MESSAGE, async (messageData) => {
+                io.emit(SOCKET_EVENTS.RECEIVE_MESSAGE, messageData);
+                await addNotification(io, "Yeni Mesaj", `${messageData.text}`, socket.userData.name, socket.userData.key);
             });
 
-            socket.on("play_video", (data) => {
-                socket.broadcast.emit("play_video", data);
+            socket.on(SOCKET_EVENTS.PLAY_VIDEO, (data) => {
+                socket.broadcast.emit(SOCKET_EVENTS.PLAY_VIDEO, data);
             });
 
-            socket.on("pause_video", (data) => {
-                socket.broadcast.emit("pause_video", data);
+            socket.on(SOCKET_EVENTS.PAUSE_VIDEO, (data) => {
+                socket.broadcast.emit(SOCKET_EVENTS.PAUSE_VIDEO, data);
             });
 
-            socket.on("seek_video", (data) => {
-                socket.broadcast.emit("seek_video", data);
+            socket.on(SOCKET_EVENTS.SEEK_VIDEO, (data) => {
+                socket.broadcast.emit(SOCKET_EVENTS.SEEK_VIDEO, data);
             });
 
-            socket.on("change_movie", (movieTitle) => {
-                io.emit("change_movie", movieTitle);
+            socket.on(SOCKET_EVENTS.CHANGE_MOVIE, (movieTitle) => {
+                io.emit(SOCKET_EVENTS.CHANGE_MOVIE, movieTitle);
             });
         } catch (err) {
             console.log('⚠️ Geçersiz token');
         }
     }
 
-    socket.on('disconnect', () => {
+    socket.on(SOCKET_EVENTS.DISCONNECT, () => {
         if (socket.userData) {
             console.log(`🔴 [AYRILDI] ${socket.userData.name}`);
         }

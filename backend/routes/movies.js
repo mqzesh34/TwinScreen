@@ -3,6 +3,7 @@ const router = express.Router();
 const { MOVIES_FILE, readJson, writeJson } = require('../utils/db');
 const auth = require('../middleware/auth');
 const { addNotification } = require('../utils/notificationManager');
+const { SOCKET_EVENTS } = require('../utils/constants');
 
 router.get('/', auth, async (req, res) => {
     const movies = await readJson(MOVIES_FILE);
@@ -26,8 +27,8 @@ router.post('/', auth, async (req, res) => {
     await writeJson(MOVIES_FILE, movies);
     
     const io = req.app.get('io');
-    io.emit('movies_updated', movies);
-    addNotification(io, "Yeni Film Eklendi", `${req.user.name}, "${title}" filmini arşive ekledi.`, req.user.name, req.user.key);
+    io.emit(SOCKET_EVENTS.MOVIES_UPDATED, movies);
+    await addNotification(io, "Yeni Film Eklendi", `${req.user.name}, "${title}" filmini arşive ekledi.`, req.user.name, req.user.key);
     res.json({ message: "Film eklendi", movie: newMovie });
 });
 
@@ -50,8 +51,8 @@ router.delete('/:id', auth, async (req, res) => {
     await writeJson(MOVIES_FILE, movies);
     
     const io = req.app.get('io');
-    io.emit('movies_updated', movies);
-    addNotification(io, "Film Silindi", `${req.user.name}, "${movieToDelete.title}" filmini sildi.`, req.user.name, req.user.key);
+    io.emit(SOCKET_EVENTS.MOVIES_UPDATED, movies);
+    await addNotification(io, "Film Silindi", `${req.user.name}, "${movieToDelete.title}" filmini sildi.`, req.user.name, req.user.key);
     res.json({ message: "Film silindi", id: idToDelete });
 });
 

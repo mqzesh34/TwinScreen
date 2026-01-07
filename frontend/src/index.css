@@ -2,20 +2,20 @@
 @import "tailwindcss";
 
 :root {
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    background-color: black;
-    font-family: "Quicksand", sans-serif;
-    font-weight: 600;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  background-color: black;
+  font-family: "Quicksand", sans-serif;
+  font-weight: 600;
 }
 
 body {
-    font-family: "Quicksand", sans-serif;
-    font-weight: 600;
-    background-color: black;
-    color: white;
+  font-family: "Quicksand", sans-serif;
+  font-weight: 600;
+  background-color: black;
+  color: white;
 }
 
 ::-webkit-scrollbar {
@@ -27,5 +27,18 @@ body {
   scrollbar-width: none;
 }
 button {
-    cursor: pointer;
+  cursor: pointer;
+}
+
+.custom-toast {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 100px !important;
+  color: #fff !important;
+  padding: 12px 24px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
 }

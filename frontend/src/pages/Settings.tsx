@@ -10,8 +10,6 @@ import {
   UserPlus,
   Trash2,
   LogOut,
-  Globe,
-  Smartphone,
   Bell,
   Shield,
   X,
@@ -25,7 +23,6 @@ interface User {
 }
 
 interface RoomSettings {
-  platform: "web" | "mobil" | "none";
   notifications: boolean;
 }
 
@@ -38,7 +35,6 @@ export default function Settings() {
   const settingsFetched = useRef(false);
   const usersFetched = useRef(false);
   const [settings, setSettings] = useState<RoomSettings>({
-    platform: "none",
     notifications: false,
   });
   const [users, setUsers] = useState<User[]>([]);
@@ -88,7 +84,6 @@ export default function Settings() {
           Authorization: `Bearer ${userKey || ""}`,
         },
         body: JSON.stringify({
-          platform: settings.platform,
           notifications: settings.notifications,
         }),
       });
@@ -164,54 +159,7 @@ export default function Settings() {
             </div>
 
             <div className="space-y-6">
-              <div className="space-y-3">
-                <label className="text-xs text-white/40 uppercase font-bold pl-1">
-                  Platform
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <button
-                      onClick={() =>
-                        setSettings({ ...settings, platform: "web" })
-                      }
-                      className={`w-full p-4 rounded-2xl border-2 transition-all font-bold text-sm uppercase tracking-wider flex flex-col items-center justify-center gap-2 ${
-                        settings.platform === "web"
-                          ? "bg-purple-500/20 border-purple-500 text-purple-400"
-                          : "bg-white/5 border-white/10 text-white hover:border-white/20"
-                      }`}
-                    >
-                      <Globe size={24} />
-                      Web Sayfası
-                    </button>
-                    <p className="text-[10px] text-white/40 text-center leading-relaxed px-1 h-8 flex items-center justify-center">
-                      Gelişmiş sohbet özellikleri ve geniş ekran desteği ile tam
-                      masaüstü deneyimi sunar
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <button
-                      onClick={() =>
-                        setSettings({ ...settings, platform: "mobil" })
-                      }
-                      className={`w-full p-4 rounded-2xl border-2 transition-all font-bold text-sm uppercase tracking-wider flex flex-col items-center justify-center gap-2 ${
-                        settings.platform === "mobil"
-                          ? "bg-purple-500/20 border-purple-500 text-purple-400"
-                          : "bg-white/5 border-white/10 text-white hover:border-white/20"
-                      }`}
-                    >
-                      <Smartphone size={24} />
-                      Mobil
-                    </button>
-                    <p className="text-[10px] text-white/40 text-center leading-relaxed px-1 h-8 flex items-center justify-center">
-                      Tam ekran video modu ve hızlı tepki butonları ile optimize
-                      edilmiş mobil deneyimi sağlar
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3 pt-2 border-t border-white/10">
+              <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl">
                   <div className="flex items-center gap-3">
                     <div

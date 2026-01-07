@@ -6,6 +6,8 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const MOVIES_FILE = path.join(DATA_DIR, 'movies.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
+const NOTIFICATIONS_FILE = path.join(DATA_DIR, 'notifications.json');
+const PRIVATE_ROOMS_FILE = path.join(DATA_DIR, 'privateRooms.json');
 
 async function readJson(file) {
     try {
@@ -35,6 +37,8 @@ module.exports = {
     USERS_FILE,
     MOVIES_FILE,
     SETTINGS_FILE,
+    NOTIFICATIONS_FILE,
+    PRIVATE_ROOMS_FILE,
     readJson,
     readSettings,
     writeJson,
