@@ -17,7 +17,10 @@ const SOCKET_EVENTS = {
     SYNC_STATUS: 'video:sync_status',
     FORCE_SYNC: 'video:force_sync',
     LEAVE_VIDEO_ROOM: 'leave_video_room',
-    SEND_ROOM_NOTIFICATION: 'send_room_notification'
+    SEND_ROOM_NOTIFICATION: 'send_room_notification',
+    VOICE_REGISTER: 'voice:register',
+    VOICE_PEER_JOINED: 'voice:peer_joined',
+    VOICE_PEER_LEFT: 'voice:peer_left'
 };
 
 module.exports = {

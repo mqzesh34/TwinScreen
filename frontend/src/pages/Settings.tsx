@@ -47,13 +47,9 @@ export default function Settings() {
       const res = await fetch("http://localhost:3001/settings", {
         headers: { Authorization: `Bearer ${userKey || ""}` },
       });
-
       const data = await res.json();
       if (res.ok) setSettings(data);
-    } catch (res: any) {
-      const data = await res.json();
-      toast.error(data.error);
-    }
+    } catch {}
   };
 
   const fetchUsers = async () => {
@@ -61,10 +57,9 @@ export default function Settings() {
       const res = await fetch("http://localhost:3001/users", {
         headers: { Authorization: `Bearer ${userKey || ""}` },
       });
-
       const data = await res.json();
       if (res.ok) setUsers(data);
-    } catch (err) {}
+    } catch {}
   };
 
   useEffect(() => {
@@ -81,7 +76,6 @@ export default function Settings() {
   const toggleNotifications = async () => {
     const newStatus = !settings.notifications;
     setSettings({ ...settings, notifications: newStatus });
-
     try {
       const res = await fetch("http://localhost:3001/settings", {
         method: "POST",
@@ -89,18 +83,10 @@ export default function Settings() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${userKey || ""}`,
         },
-        body: JSON.stringify({
-          notifications: newStatus,
-        }),
+        body: JSON.stringify({ notifications: newStatus }),
       });
-      if (res.ok) {
-        // const data = await res.json();
-        toast.success(t("common_success"));
-      }
-    } catch (res: any) {
-      const data = await res.json();
-      toast.error(data.error);
-    }
+      if (res.ok) toast.success(t("common_success"));
+    } catch {}
   };
 
   const handleUpdateUsers = async () => {
@@ -113,14 +99,8 @@ export default function Settings() {
         },
         body: JSON.stringify({ users }),
       });
-      if (res.ok) {
-        // const data = await res.json();
-        toast.success(t("common_success"));
-      }
-    } catch (res: any) {
-      const data = await res.json();
-      toast.error(data.error);
-    }
+      if (res.ok) toast.success(t("common_success"));
+    } catch {}
   };
 
   const handleUserChange = (id: number, field: keyof User, value: string) => {
@@ -169,7 +149,7 @@ export default function Settings() {
             <div className="space-y-6">
               <div className="space-y-3 pt-2">
                 <div className="grid grid-cols-2 gap-4">
-                  {/* Notifications */}
+                  {}
                   <div className="flex flex-col justify-between p-4 bg-white/5 border border-white/10 rounded-2xl h-full">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400">
@@ -203,7 +183,7 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  {/* Language */}
+                  {}
                   <button
                     onClick={() => changeLanguage(lang === "tr" ? "en" : "tr")}
                     className="flex flex-col justify-between p-4 bg-white/5 border border-white/10 rounded-2xl h-full hover:bg-white/10 transition-colors text-left group"

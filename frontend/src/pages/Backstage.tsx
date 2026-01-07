@@ -56,10 +56,9 @@ export default function Backstage() {
       const res = await fetch("http://localhost:3001/movies", {
         headers: { Authorization: `Bearer ${userKey || ""}` },
       });
-
       const data = await res.json();
       if (res.ok) setMovies(data);
-    } catch (err) {
+    } catch {
       toast.error(t("common_error"));
     }
   };
@@ -91,7 +90,6 @@ export default function Backstage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${userKey || ""}`,
         },
-
         body: JSON.stringify({ title: newTitle, preview_url: newVideoUrl }),
       });
       if (res.ok) {
@@ -100,7 +98,7 @@ export default function Backstage() {
         setNewTitle("");
         setNewVideoUrl("");
       }
-    } catch (err) {
+    } catch {
       toast.error(t("common_error"));
     }
   };
@@ -112,12 +110,11 @@ export default function Backstage() {
         method: "DELETE",
         headers: { Authorization: `Bearer ${userKey || ""}` },
       });
-
       if (res.ok) {
         toast.success(t("common_success"));
         setDeleteId(null);
       }
-    } catch (err) {
+    } catch {
       toast.error(t("common_error"));
     }
   };
@@ -137,7 +134,6 @@ export default function Backstage() {
   const handleCreateRoom = async () => {
     if (!selectedMovieId || !selectedUserId)
       return toast.error(t("common_error"));
-
     try {
       const res = await fetch("http://localhost:3001/private-rooms", {
         method: "POST",
@@ -150,9 +146,8 @@ export default function Backstage() {
           invitedUserId: selectedUserId,
         }),
       });
-
       if (res.ok) {
-        toast.success(t("backstage_create_room_title")); // Using title as success message contextually works or add new key
+        toast.success(t("backstage_create_room_title"));
         setIsRoomModalOpen(false);
         setSelectedUserId(null);
       } else {
@@ -315,7 +310,7 @@ export default function Backstage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="https://..."
+                  placeholder="https://youtube.com/..."
                   value={newVideoUrl}
                   onChange={(e) => setNewVideoUrl(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none p-4 rounded-2xl text-white placeholder-white/20"

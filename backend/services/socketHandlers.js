@@ -6,21 +6,15 @@ const jwt = require('jsonwebtoken');
 const config = require('../data/config.json');
 
 const roomHeartbeats = {};
+const voicePeers = {};
 
 const checkRoomActivity = async (io, roomId) => {
     if (!roomId || roomId === "public") return;
-
-    // Use a slight delay to allow socket join/leave operations to propagate
-    // But since we are calling this *after* join/leave sync, immediate check might be okay if using the adapter correctly.
-    // However, for disconnect, sometimes it takes a tick. 
-    // Let's trust the adapter state at the moment of call.
-
     const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
     const isSessionActive = count >= 2;
 
     const updates = { usersActive: isSessionActive };
     
-    // If session is not active, force pause
     if (!isSessionActive) {
         updates.isPlaying = false;
     }
@@ -69,14 +63,12 @@ const setupSocketHandlers = (io) => {
                 if (socket.videoRoom && socket.videoRoom !== roomId) {
                     const oldRoom = socket.videoRoom;
                     socket.leave(oldRoom);
-                    // Check activity for old room
                     await checkRoomActivity(io, oldRoom);
                 }
 
                 socket.join(roomId);
                 socket.videoRoom = roomId;
 
-                // Check activity for new room (includes this user now)
                 await checkRoomActivity(io, roomId);
             });
 
@@ -98,11 +90,6 @@ const setupSocketHandlers = (io) => {
                 const senderName = socket.userData.name;
                 let partnerInRoom = false;
 
-                // 1. Notify inside the room (fallback, rarely useful if we want to avoid duplicates, but kept for legacy/public rooms)
-                // Actually, if we are stricter, we might want to skip this if ANYONE is in the room? 
-                // But the requirement is about specific partner toast.
-                
-                // 2. Notify the specific partner globally
                 if (roomId.startsWith('private_')) {
                     try {
                         const privateRoomId = parseInt(roomId.split('_')[1]);
@@ -115,12 +102,10 @@ const setupSocketHandlers = (io) => {
                             else if (room.invitedUser === senderName) targetUser = room.creator;
                             
                             if (targetUser) {
-                                // Find connected socket for the target user
                                 const targetSocket = Array.from(io.sockets.sockets.values())
                                     .find(s => s.userData && s.userData.name === targetUser);
                                 
                                 if (targetSocket) {
-                                    // Check if user is ALREADY in the room
                                     if (targetSocket.videoRoom === roomId) {
                                         partnerInRoom = true;
                                     } else {
@@ -137,8 +122,6 @@ const setupSocketHandlers = (io) => {
                     }
                 }
 
-                // Only flush to DB notification if not already in room (optional, but cleaner)
-                // But let's keep it simply adding to history for now unless requested otherwise.
                 await addNotification(
                     io, 
                     "Oda Bildirimi", 
@@ -184,12 +167,10 @@ const setupSocketHandlers = (io) => {
                 const { roomId } = data;
                 if (!roomId) return;
                 
-                // Get the current persisted state to use as sync point
                 const currentState = await getRoomState(roomId);
                 const syncTime = currentState.time || 0;
                 
                 io.to(roomId).emit(SOCKET_EVENTS.COUNTDOWN, { targetTime: syncTime, user: socket.userData.name });
-                // Countdown indicates intent to play, set isPlaying to true so late joiners sync correctly
                 await updateRoomState(roomId, { time: syncTime, isPlaying: true });
             });
 
@@ -220,7 +201,6 @@ const setupSocketHandlers = (io) => {
                 
                 roomHeartbeats[roomId][userName] = { time, isPlaying, lastUpdate: Date.now() };
                 
-                // Clean up old entries
                 const now = Date.now();
                 for (const [user, uData] of Object.entries(roomHeartbeats[roomId])) {
                     if (now - uData.lastUpdate > 5000) {
@@ -228,7 +208,6 @@ const setupSocketHandlers = (io) => {
                     }
                 }
 
-                // Clean up empty rooms to prevent memory leaks
                 if (Object.keys(roomHeartbeats[roomId]).length === 0) {
                     delete roomHeartbeats[roomId];
                     return;
@@ -236,8 +215,6 @@ const setupSocketHandlers = (io) => {
                 
                 const users = Object.values(roomHeartbeats[roomId]);
                 
-                // Determine Sync Status
-                // 1. Check if all users have the same playing state
                 const allPlaying = users.every(u => u.isPlaying);
                 const allPaused = users.every(u => !u.isPlaying);
                 const isStateConsistent = allPlaying || allPaused;
@@ -245,30 +222,23 @@ const setupSocketHandlers = (io) => {
                 let isSynced = true;
 
                 if (!isStateConsistent) {
-                    // If some are playing and some are paused, they are NOT synced
                     isSynced = false;
                 } else {
-                    // Check time consistency
                     const times = users.map(u => {
-                        // If playing, predict current time based on lag. If paused, use static time.
                         return u.isPlaying ? u.time + (now - u.lastUpdate) / 1000 : u.time;
                     });
                     
-                    if (times.length >= 1) { // Changed to 1 to allow saving even with single user
+                    if (times.length >= 1) {
                         const maxTime = Math.max(...times);
                         const minTime = Math.min(...times);
                         
-                        // Tolerance: 2 seconds for active playback
                         if ((maxTime - minTime) > 2.0 && times.length >= 2) {
                             isSynced = false;
                         }
 
-                        // Periodic Persistence (every 5 seconds)
                         const lastSaved = roomHeartbeats[roomId].lastSaved || 0;
                         if (isPlaying && (now - lastSaved > 5000)) {
                              const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
-                             // Update JSON to keep it fresh
-                             // We use await but don't block the response critical path significantly
                              await updateRoomState(roomId, { time: avgTime, isPlaying: true });
                              roomHeartbeats[roomId].lastSaved = now;
                         }
@@ -283,7 +253,6 @@ const setupSocketHandlers = (io) => {
                      
                      if ((maxTime - minTime) > 2.5) {
                          const avgTime = Math.round((minTime + maxTime) / 2);
-                         console.log(`⚠️ Sync Mismatch! Diff: ${(maxTime - minTime).toFixed(1)}s, Correcting to: ${avgTime}s`);
                          
                          io.to(roomId).emit(SOCKET_EVENTS.FORCE_SYNC, { 
                             time: avgTime, 
@@ -305,20 +274,52 @@ const setupSocketHandlers = (io) => {
                 });
             });
 
+            socket.on(SOCKET_EVENTS.VOICE_REGISTER, (data) => {
+                const { roomId, peerId } = data;
+                if (!roomId || !peerId) return;
+
+                if (!voicePeers[roomId]) {
+                    voicePeers[roomId] = {};
+                }
+
+                const existingSocketIds = Object.keys(voicePeers[roomId]);
+                for (const sid of existingSocketIds) {
+                    if (!io.sockets.sockets.has(sid)) {
+                        delete voicePeers[roomId][sid];
+                    }
+                }
+
+                voicePeers[roomId][socket.id] = peerId;
+                socket.voiceRoom = roomId;
+                socket.peerId = peerId;
+
+                socket.to(roomId).emit(SOCKET_EVENTS.VOICE_PEER_JOINED, { peerId });
+
+                const existingPeers = Object.entries(voicePeers[roomId])
+                    .filter(([sid]) => sid !== socket.id)
+                    .map(([, pid]) => pid);
+
+                if (existingPeers.length > 0) {
+                    socket.emit(SOCKET_EVENTS.VOICE_PEER_JOINED, { peerId: existingPeers[0] });
+                }
+            });
+
             socket.on(SOCKET_EVENTS.DISCONNECT, async () => {
                 if (socket.userData) {
                     console.log(`🔴 [LEFT] ${socket.userData.name}`);
                 }
+
+                if (socket.voiceRoom && voicePeers[socket.voiceRoom]) {
+                    delete voicePeers[socket.voiceRoom][socket.id];
+                    socket.to(socket.voiceRoom).emit(SOCKET_EVENTS.VOICE_PEER_LEFT);
+                    
+                    if (Object.keys(voicePeers[socket.voiceRoom]).length === 0) {
+                        delete voicePeers[socket.voiceRoom];
+                    }
+                }
                 
                 if (socket.videoRoom) {
                     const roomId = socket.videoRoom;
-                    // Don't modify room state here directly for pause, let checkRoomActivity handle logic if needed
-                    // But typically pause on leave is good.
-                    // Actually checkRoomActivity handles isPlaying = false if activity drops.
-                    
-                    // We still emit pause locally just in case? Or rely on checkRoomActivity.
-                    // checkRoomActivity emits VIDEO_SYNC which sends the whole state (including isPlaying).
-                    
                     await checkRoomActivity(io, roomId);
                 }
             });

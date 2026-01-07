@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSocket } from "../contexts/SocketContext";
 import toast from "react-hot-toast";
 import useTranslation from "../hooks/useTranslation";
+import VoiceChat from "./VoiceChat";
 
 interface YouTubeSyncPlayerProps {
   initialVideoId?: string;
@@ -402,6 +403,10 @@ export default function YouTubeSyncPlayer({
             {countdown}
           </div>
         </div>
+      )}
+
+      {roomId !== "public" && (
+        <VoiceChat roomId={roomId} enabled={hasInteracted && usersActive} />
       )}
     </div>
   );
