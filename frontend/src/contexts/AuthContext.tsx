@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const validateToken = async (savedToken: string) => {
     try {
-      const res = await fetch("http://localhost:3001/validate-key", {
+      const res = await fetch("/validate-key", {
         headers: { Authorization: `Bearer ${savedToken}` },
       });
       if (res.ok) {
@@ -77,7 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (key: string) => {
     setIsLoading(true);
     try {
-      const res = await fetch("http://localhost:3001/login", {
+      const res = await fetch("/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key }),

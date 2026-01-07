@@ -44,7 +44,7 @@ export default function Settings() {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch("http://localhost:3001/settings", {
+      const res = await fetch("/settings", {
         headers: { Authorization: `Bearer ${userKey || ""}` },
       });
       const data = await res.json();
@@ -54,7 +54,7 @@ export default function Settings() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch("http://localhost:3001/users", {
+      const res = await fetch("/users", {
         headers: { Authorization: `Bearer ${userKey || ""}` },
       });
       const data = await res.json();
@@ -77,7 +77,7 @@ export default function Settings() {
     const newStatus = !settings.notifications;
     setSettings({ ...settings, notifications: newStatus });
     try {
-      const res = await fetch("http://localhost:3001/settings", {
+      const res = await fetch("/settings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -91,7 +91,7 @@ export default function Settings() {
 
   const handleUpdateUsers = async () => {
     try {
-      const res = await fetch("http://localhost:3001/users", {
+      const res = await fetch("/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

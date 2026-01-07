@@ -43,7 +43,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!userKey) return;
 
-    fetch("http://localhost:3001/notifications", {
+    fetch("/notifications", {
       headers: { Authorization: `Bearer ${userKey}` },
     })
       .then((res) => res.json())
@@ -85,7 +85,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setNotifications(updated);
 
     try {
-      await fetch("http://localhost:3001/notifications/read-all", {
+      await fetch("/notifications/read-all", {
         method: "POST",
         headers: { Authorization: `Bearer ${userKey || ""}` },
       });
@@ -98,7 +98,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setNotifications([]);
 
     try {
-      await fetch("http://localhost:3001/notifications/clear", {
+      await fetch("/notifications/clear", {
         method: "DELETE",
         headers: { Authorization: `Bearer ${userKey || ""}` },
       });

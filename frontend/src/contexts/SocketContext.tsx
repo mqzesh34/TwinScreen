@@ -19,7 +19,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (isAuthenticated && userKey) {
-      const newSocket = io("http://localhost:3001", {
+      const newSocket = io({
         auth: {
           token: userKey,
         },

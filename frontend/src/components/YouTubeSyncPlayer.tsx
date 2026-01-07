@@ -74,6 +74,7 @@ export default function YouTubeSyncPlayer({
         modestbranding: 1,
         rel: 0,
         playsinline: 1,
+        origin: window.location.origin,
       },
       events: {
         onReady: onPlayerReady,
@@ -84,12 +85,23 @@ export default function YouTubeSyncPlayer({
 
   const warmUpPlayer = () => {
     if (playerRef.current && playerRef.current.playVideo) {
+      isRemoteUpdate.current = true;
       playerRef.current.mute();
       playerRef.current.playVideo();
-      setTimeout(() => {
-        playerRef.current.pauseVideo();
-        playerRef.current.unMute();
-      }, 100);
+
+      if (!usersActive && roomId !== "public") {
+        setTimeout(() => {
+          if (playerRef.current) {
+            playerRef.current.pauseVideo();
+            playerRef.current.unMute();
+          }
+          isRemoteUpdate.current = false;
+        }, 1000);
+      } else {
+        setTimeout(() => {
+          isRemoteUpdate.current = false;
+        }, 1000);
+      }
     }
   };
 
@@ -124,10 +136,7 @@ export default function YouTubeSyncPlayer({
 
     if (state === 1) {
       if (!countdownActive.current) {
-        event.target.pauseVideo();
-
-        const targetTime = currentTime;
-        socket?.emit("video:countdown", { roomId, targetTime });
+        socket?.emit("video:countdown", { roomId, targetTime: currentTime });
       }
     } else if (state === 2) {
       if (countdownActive.current) return;
@@ -150,6 +159,15 @@ export default function YouTubeSyncPlayer({
           toast(t("sync_player_partner_already_joined"), { icon: "ℹ️" });
         }
       });
+    }
+
+    if (usersActive && roomId !== "public") {
+      setTimeout(() => {
+        socket?.emit("video:countdown", {
+          roomId,
+          targetTime: playerRef.current?.getCurrentTime() || 0,
+        });
+      }, 1200);
     }
   };
 
@@ -233,8 +251,10 @@ export default function YouTubeSyncPlayer({
 
       if (playerRef.current && playerRef.current.seekTo) {
         isRemoteUpdate.current = true;
-        playerRef.current.pauseVideo();
+
         playerRef.current.seekTo(data.targetTime, true);
+        playerRef.current.playVideo();
+
         setTimeout(() => (isRemoteUpdate.current = false), 500);
       }
 
@@ -248,7 +268,11 @@ export default function YouTubeSyncPlayer({
 
           if (playerRef.current && playerRef.current.playVideo) {
             isRemoteUpdate.current = true;
+
+            playerRef.current.seekTo(data.targetTime, true);
             playerRef.current.playVideo();
+            playerRef.current.unMute();
+
             setTimeout(() => (isRemoteUpdate.current = false), 1000);
           }
         }
@@ -259,6 +283,10 @@ export default function YouTubeSyncPlayer({
       "video:force_sync",
       (data: { time: number; reason: string; isPlaying?: boolean }) => {
         if (playerRef.current && playerRef.current.seekTo) {
+          if (data.reason) {
+            toast(data.reason, { icon: "🔄", duration: 3000 });
+          }
+
           isRemoteUpdate.current = true;
           playerRef.current.seekTo(data.time, true);
 

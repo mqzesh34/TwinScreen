@@ -53,7 +53,7 @@ export default function Backstage() {
 
   const fetchMovies = async () => {
     try {
-      const res = await fetch("http://localhost:3001/movies", {
+      const res = await fetch("/movies", {
         headers: { Authorization: `Bearer ${userKey || ""}` },
       });
       const data = await res.json();
@@ -84,7 +84,7 @@ export default function Backstage() {
   const handleAddMovie = async () => {
     if (!newTitle || !newVideoUrl) return toast.error(t("common_error"));
     try {
-      const res = await fetch("http://localhost:3001/movies", {
+      const res = await fetch("/movies", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -106,7 +106,7 @@ export default function Backstage() {
   const confirmDelete = async () => {
     if (!deleteId) return;
     try {
-      const res = await fetch(`http://localhost:3001/movies/${deleteId}`, {
+      const res = await fetch(`/movies/${deleteId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${userKey || ""}` },
       });
@@ -122,7 +122,7 @@ export default function Backstage() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await fetch("http://localhost:3001/users", {
+        const res = await fetch("/users", {
           headers: { Authorization: `Bearer ${userKey || ""}` },
         });
         if (res.ok) setUsers(await res.json());
@@ -135,7 +135,7 @@ export default function Backstage() {
     if (!selectedMovieId || !selectedUserId)
       return toast.error(t("common_error"));
     try {
-      const res = await fetch("http://localhost:3001/private-rooms", {
+      const res = await fetch("/private-rooms", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

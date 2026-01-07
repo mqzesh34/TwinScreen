@@ -35,7 +35,7 @@ export default function PrivateRoom() {
 
   const fetchRooms = async () => {
     try {
-      const res = await fetch("http://localhost:3001/private-rooms", {
+      const res = await fetch("/private-rooms", {
         headers: { Authorization: `Bearer ${userKey || ""}` },
       });
       if (res.ok) {
@@ -66,13 +66,10 @@ export default function PrivateRoom() {
   const confirmDelete = async () => {
     if (!deleteRoomId) return;
     try {
-      const res = await fetch(
-        `http://localhost:3001/private-rooms/${deleteRoomId}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${userKey || ""}` },
-        }
-      );
+      const res = await fetch(`/private-rooms/${deleteRoomId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${userKey || ""}` },
+      });
       if (res.ok) {
         toast.success(t("private_rooms_delete_success"));
         fetchRooms();

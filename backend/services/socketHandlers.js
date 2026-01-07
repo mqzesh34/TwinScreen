@@ -245,7 +245,6 @@ const setupSocketHandlers = (io) => {
                     }
                 }
 
-                // Force Sync Logic
                 if (allPlaying && !isSynced) {
                      const times = users.map(u => u.time + (now - u.lastUpdate) / 1000);
                      const maxTime = Math.max(...times);
@@ -293,15 +292,14 @@ const setupSocketHandlers = (io) => {
                 socket.voiceRoom = roomId;
                 socket.peerId = peerId;
 
-                socket.to(roomId).emit(SOCKET_EVENTS.VOICE_PEER_JOINED, { peerId });
 
                 const existingPeers = Object.entries(voicePeers[roomId])
                     .filter(([sid]) => sid !== socket.id)
                     .map(([, pid]) => pid);
 
-                if (existingPeers.length > 0) {
-                    socket.emit(SOCKET_EVENTS.VOICE_PEER_JOINED, { peerId: existingPeers[0] });
-                }
+                existingPeers.forEach(pid => {
+                    socket.emit(SOCKET_EVENTS.VOICE_PEER_JOINED, { peerId: pid });
+                });
             });
 
             socket.on(SOCKET_EVENTS.DISCONNECT, async () => {
