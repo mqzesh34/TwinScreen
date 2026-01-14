@@ -10,10 +10,13 @@ import {
   UserPlus,
   Trash2,
   LogOut,
-  Bell,
   Shield,
   X,
   Languages,
+  Mic,
+  Zap,
+  RefreshCw,
+  Copy,
 } from "lucide-react";
 import useTranslation from "../hooks/useTranslation";
 
@@ -24,8 +27,27 @@ interface User {
   key: string;
 }
 
-interface RoomSettings {
-  notifications: boolean;
+function urlBase64ToUint8Array(base64String: string) {
+  if (!base64String) throw new Error("Vapid Key is missing");
+
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+
+  console.log("Original VAPID:", base64String);
+  console.log("Converted Base64:", base64);
+
+  try {
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  } catch (e) {
+    console.error("VAPID conversion error:", e);
+    throw e;
+  }
 }
 
 export default function Settings() {
@@ -34,22 +56,118 @@ export default function Settings() {
   const [userToDeleteId, setUserToDeleteId] = useState<number | null>(null);
   const navigate = useNavigate();
   const { userKey, userRole, logout } = useAuth();
-  const settingsFetched = useRef(false);
   const usersFetched = useRef(false);
-  const [settings, setSettings] = useState<RoomSettings>({
-    notifications: false,
-  });
+
   const [users, setUsers] = useState<User[]>([]);
   const { lang, changeLanguage, t } = useTranslation();
+  const [autoVoice, setAutoVoice] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
 
-  const fetchSettings = async () => {
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "granted") {
+      setPushEnabled(true);
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.ready.then((reg) => {
+          reg.pushManager.getSubscription().then((sub) => {
+            if (sub) setPushEnabled(true);
+          });
+        });
+      }
+    }
+  }, []);
+
+  const handlePushSubscribe = async () => {
+    if (!("serviceWorker" in navigator)) return;
+
     try {
-      const res = await fetch("/settings", {
-        headers: { Authorization: `Bearer ${userKey || ""}` },
+      const register = await navigator.serviceWorker.register("/sw.js");
+
+      const resKey = await fetch("/push/key");
+      const data = await resKey.json();
+      console.log("VAPID Public Key:", data.publicKey);
+
+      const { publicKey } = data;
+      if (!publicKey) throw new Error("Public Key not found in response");
+
+      const subscription = await register.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
-      const data = await res.json();
-      if (res.ok) setSettings(data);
-    } catch {}
+
+      await fetch("/push/subscribe", {
+        method: "POST",
+        body: JSON.stringify(subscription),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userKey || ""}`,
+        },
+      });
+
+      setPushEnabled(true);
+      toast.success("Bildirimler açıldı ✅");
+    } catch (err: any) {
+      console.error("Push abonelik hatası:", err);
+      toast.error("Abonelik hatası: " + (err.message || "Bilinmeyen hata"));
+      setPushEnabled(false);
+    }
+  };
+
+  const handlePushUnsubscribe = async () => {
+    if (!("serviceWorker" in navigator)) return;
+
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const subscription = await reg.pushManager.getSubscription();
+
+      if (subscription) {
+        await fetch("/push/unsubscribe", {
+          method: "POST",
+          body: JSON.stringify({ endpoint: subscription.endpoint }),
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${userKey || ""}`,
+          },
+        });
+
+        await subscription.unsubscribe();
+      }
+
+      setPushEnabled(false);
+      toast.success("Bildirimler kapatıldı 🔕");
+    } catch (err) {
+      console.error("Unsubscribe error:", err);
+      toast.error("Kapatılırken hata oluştu");
+    }
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem("autoVoice");
+    if (saved !== null) {
+      setAutoVoice(JSON.parse(saved));
+    }
+  }, []);
+
+  const toggleAutoVoice = () => {
+    const newVal = !autoVoice;
+    setAutoVoice(newVal);
+    localStorage.setItem("autoVoice", JSON.stringify(newVal));
+  };
+
+  const generateRandomCode = () => {
+    return Array.from(crypto.getRandomValues(new Uint8Array(8)))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  };
+
+  const handleGenerateKey = (id: number) => {
+    handleUserChange(id, "key", generateRandomCode());
+    toast.success(t("common_success"));
+  };
+
+  const copyToClipboard = (text: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    toast.success("Kopyalandı!");
   };
 
   const fetchUsers = async () => {
@@ -63,31 +181,9 @@ export default function Settings() {
   };
 
   useEffect(() => {
-    if (settingsFetched.current) return;
-    settingsFetched.current = true;
-    fetchSettings();
-  }, []);
-
-  useEffect(() => {
     usersFetched.current = true;
     fetchUsers();
   }, []);
-
-  const toggleNotifications = async () => {
-    const newStatus = !settings.notifications;
-    setSettings({ ...settings, notifications: newStatus });
-    try {
-      const res = await fetch("/settings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${userKey || ""}`,
-        },
-        body: JSON.stringify({ notifications: newStatus }),
-      });
-      if (res.ok) toast.success(t("common_success"));
-    } catch {}
-  };
 
   const handleUpdateUsers = async () => {
     try {
@@ -148,47 +244,94 @@ export default function Settings() {
 
             <div className="space-y-6">
               <div className="space-y-3 pt-2">
-                <div className="grid grid-cols-2 gap-4">
-                  {}
-                  <div className="flex flex-col justify-between p-4 bg-white/5 border border-white/10 rounded-2xl h-full">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400">
-                        <Bell size={20} />
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="flex flex-row items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl bg-green-500/20 text-green-400">
+                        <Mic size={20} />
                       </div>
                       <div>
                         <div className="font-bold text-sm">
-                          {t("settings_notifications_title")}
+                          {t("settings_auto_voice_title")}
                         </div>
                         <div className="text-[10px] text-white/40 font-medium leading-tight">
-                          {t("settings_notifications_desc")}
+                          {t("settings_auto_voice_desc")}
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex justify-end">
-                      <button
-                        onClick={toggleNotifications}
-                        className={`w-12 h-7 rounded-full transition-all relative ${
-                          settings.notifications
-                            ? "bg-purple-500"
-                            : "bg-white/10"
+                    <button
+                      onClick={toggleAutoVoice}
+                      className={`w-12 h-7 rounded-full transition-all relative shrink-0 ${
+                        autoVoice ? "bg-green-500" : "bg-white/10"
+                      }`}
+                    >
+                      <div
+                        className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-lg ${
+                          autoVoice ? "left-6" : "left-1"
                         }`}
-                      >
-                        <div
-                          className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-lg ${
-                            settings.notifications ? "left-6" : "left-1"
-                          }`}
-                        />
-                      </button>
-                    </div>
+                      />
+                    </button>
                   </div>
 
-                  {}
+                  <div className="flex flex-row items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl bg-yellow-500/20 text-yellow-400">
+                        <Zap size={20} />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm">
+                          {t("settings_push_title")}
+                        </div>
+                        <div className="text-[10px] text-white/40 font-medium leading-tight">
+                          {t("settings_push_desc")}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        if (pushEnabled) {
+                          handlePushUnsubscribe();
+                          return;
+                        }
+
+                        if (!("Notification" in window)) {
+                          toast.error("Tarayıcınız bildirimleri desteklemiyor");
+                          return;
+                        }
+                        Notification.requestPermission().then((permission) => {
+                          console.log("Permission Result:", permission);
+                          if (permission === "granted") {
+                            handlePushSubscribe();
+                          } else if (permission === "denied") {
+                            setPushEnabled(false);
+                            toast.error(
+                              "Tarayıcı ayarlarından bildirim engellenmiş 🔒"
+                            );
+                          } else {
+                            setPushEnabled(false);
+                            toast.error("Bildirim izni verilmedi (İptal) ❌");
+                          }
+                        });
+                      }}
+                      className={`w-12 h-7 rounded-full transition-all relative shrink-0 ${
+                        pushEnabled ? "bg-yellow-500" : "bg-white/10"
+                      }`}
+                    >
+                      <div
+                        className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-lg ${
+                          pushEnabled ? "left-6" : "left-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
                   <button
                     onClick={() => changeLanguage(lang === "tr" ? "en" : "tr")}
-                    className="flex flex-col justify-between p-4 bg-white/5 border border-white/10 rounded-2xl h-full hover:bg-white/10 transition-colors text-left group"
+                    className="flex flex-row items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors text-left group"
                   >
-                    <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-3">
                       <div className="p-2 rounded-xl bg-blue-500/20 text-blue-400">
                         <Languages size={20} />
                       </div>
@@ -202,10 +345,8 @@ export default function Settings() {
                       </div>
                     </div>
 
-                    <div className="flex justify-end w-full">
-                      <div className="px-3 py-1 bg-white/10 rounded-lg text-xs font-bold uppercase tracking-wider text-blue-400">
-                        {lang}
-                      </div>
+                    <div className="px-3 py-1 bg-white/10 rounded-lg text-xs font-bold uppercase tracking-wider text-blue-400 shrink-0">
+                      {lang}
                     </div>
                   </button>
                 </div>
@@ -275,11 +416,11 @@ export default function Settings() {
                     .map((user) => (
                       <div
                         key={user.id}
-                        className="p-4 bg-white/5 border border-white/10 rounded-xl relative group hover:border-white/20 transition-all"
+                        className="p-4 bg-white/5 border border-white/10 rounded-2xl relative group hover:border-white/20 transition-all"
                       >
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                          <div className="flex-1 w-full space-y-1">
-                            <label className="text-[10px] text-white/30 uppercase font-bold pl-1">
+                        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
+                          <div className="flex-[1.5] w-full space-y-1">
+                            <label className="text-[10px] text-white/20 uppercase font-black tracking-widest pl-1">
                               {t("admin_user_name")}
                             </label>
                             <input
@@ -292,28 +433,52 @@ export default function Settings() {
                                   e.target.value
                                 )
                               }
-                              className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500/50 transition-all font-bold"
+                              className="w-full bg-black/20 border border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500/50 transition-all font-bold text-white shadow-inner"
+                              placeholder="İsim"
                             />
                           </div>
 
-                          <div className="flex-1 w-full space-y-1">
-                            <label className="text-[10px] text-white/30 uppercase font-bold pl-1">
+                          <div className="flex-[2] w-full space-y-1 relative group/key">
+                            <label className="text-[10px] text-white/20 uppercase font-black tracking-widest pl-1">
                               {t("admin_access_code")}
                             </label>
-                            <input
-                              type="text"
-                              value={user.key}
-                              onChange={(e) =>
-                                handleUserChange(user.id, "key", e.target.value)
-                              }
-                              className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500/50 transition-all font-mono text-white/70"
-                            />
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={user.key}
+                                onChange={(e) =>
+                                  handleUserChange(
+                                    user.id,
+                                    "key",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full bg-black/20 border border-white/5 rounded-xl pl-4 pr-20 py-2.5 text-sm outline-none focus:border-blue-500/50 transition-all font-mono text-white/60 shadow-inner"
+                                placeholder="Erişim Kodu"
+                              />
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/key:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => copyToClipboard(user.key)}
+                                  className="p-1.5 text-white/20 hover:text-white transition-colors"
+                                  title="Kopyala"
+                                >
+                                  <Copy size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleGenerateKey(user.id)}
+                                  className="p-1.5 text-blue-500/60 hover:text-blue-400 transition-colors"
+                                  title="Rastgele Üret"
+                                >
+                                  <RefreshCw size={14} />
+                                </button>
+                              </div>
+                            </div>
                           </div>
 
-                          <div className="pt-4 sm:pt-0">
+                          <div className="shrink-0">
                             <button
                               onClick={() => setUserToDeleteId(user.id)}
-                              className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors"
+                              className="p-2.5 bg-red-500/5 hover:bg-red-500/10 text-red-500/40 hover:text-red-500 border border-transparent hover:border-red-500/20 rounded-xl transition-all"
                             >
                               <Trash2 size={18} />
                             </button>

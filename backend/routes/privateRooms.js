@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { readJson, writeJson, PRIVATE_ROOMS_FILE, MOVIES_FILE, USERS_FILE } = require('../utils/db');
-const { addNotification } = require('../services/notificationManager');
+const { readJson, writeJson, PRIVATE_ROOMS_FILE, MOVIES_FILE, USERS_FILE, PLAYBACK_STATE_FILE } = require('../utils/db');
 const { SOCKET_EVENTS } = require('../utils/constants');
 const auth = require('../middleware/auth');
 
@@ -18,6 +17,37 @@ router.get('/', auth, async (req, res) => {
         res.json(userRooms);
     } catch (err) {
         res.status(500).json({ error: "Odalar yüklenemedi" });
+    }
+});
+
+router.get('/last-watched', auth, async (req, res) => {
+    try {
+        const rooms = await readJson(PRIVATE_ROOMS_FILE) || [];
+        const playback = await readJson(PLAYBACK_STATE_FILE) || {};
+        const movies = await readJson(MOVIES_FILE) || [];
+
+        const userRooms = rooms.filter(r => r.invitedUser === req.user.name || r.creator === req.user.name);
+        if (userRooms.length === 0) return res.json(null);
+
+        let lastRoom = null;
+        let lastTime = -1;
+
+        userRooms.forEach(room => {
+            const state = playback[`private_${room.id}`];
+            if (state && state.lastUpdated > lastTime) {
+                lastTime = state.lastUpdated;
+                lastRoom = { ...room, playback: state };
+            }
+        });
+
+        if (!lastRoom) return res.json(null);
+
+        const movie = movies.find(m => m.id === lastRoom.movieId);
+        if (movie) lastRoom.poster_url = movie.poster_url;
+
+        res.json(lastRoom);
+    } catch (err) {
+        res.status(500).json({ error: "Veri çekilemedi" });
     }
 });
 
@@ -53,17 +83,32 @@ router.post('/', auth, async (req, res) => {
         const io = req.app.get('io');
         io.emit(SOCKET_EVENTS.PRIVATE_ROOMS_UPDATED);
 
-        await addNotification(
-            io, 
-            "Özel Oda Daveti", 
-            `${req.user.name}, "${movie.title}" filmi için bir oda oluşturdu.`,
-            req.user.name,
-            req.user.key
-        );
-
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Oda oluşturulamadı" });
+    }
+});
+
+router.delete('/', auth, async (req, res) => {
+    try {
+        const rooms = await readJson(PRIVATE_ROOMS_FILE) || [];
+        
+        const userRooms = rooms.filter(r => r.invitedUser === req.user.name || r.creator === req.user.name);
+        
+        if (userRooms.length === 0) {
+            return res.status(404).json({ error: "Silecek oda bulunamadı" });
+        }
+
+        const remainingRooms = rooms.filter(r => r.invitedUser !== req.user.name && r.creator !== req.user.name);
+
+        await writeJson(PRIVATE_ROOMS_FILE, remainingRooms);
+        res.json({ message: `${userRooms.length} oda silindi` });
+
+        const io = req.app.get('io');
+        io.emit(SOCKET_EVENTS.PRIVATE_ROOMS_UPDATED);
+
+    } catch (err) {
+        res.status(500).json({ error: "Silme işlemi başarısız" });
     }
 });
 
@@ -87,13 +132,6 @@ router.delete('/:id', auth, async (req, res) => {
         const io = req.app.get('io');
         io.emit(SOCKET_EVENTS.PRIVATE_ROOMS_UPDATED);
 
-        await addNotification(
-            io,
-            "Özel Oda Kapatıldı",
-            `${req.user.name}, "${room.movieTitle}" odasını kapattı.`,
-            req.user.name,
-            req.user.key
-        );
     } catch (err) {
         res.status(500).json({ error: "Silme işlemi başarısız" });
     }

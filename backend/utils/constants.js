@@ -20,7 +20,8 @@ const SOCKET_EVENTS = {
     SEND_ROOM_NOTIFICATION: 'send_room_notification',
     VOICE_REGISTER: 'voice:register',
     VOICE_PEER_JOINED: 'voice:peer_joined',
-    VOICE_PEER_LEFT: 'voice:peer_left'
+    VOICE_PEER_LEFT: 'voice:peer_left',
+    LAST_WATCHED_UPDATED: 'last_watched_updated'
 };
 
 module.exports = {

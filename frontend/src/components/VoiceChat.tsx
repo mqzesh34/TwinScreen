@@ -3,6 +3,8 @@ import Peer from "peerjs";
 import type { MediaConnection } from "peerjs";
 import { useSocket } from "../contexts/SocketContext";
 import { Phone, PhoneOff } from "lucide-react";
+import toast from "react-hot-toast";
+import useTranslation from "../hooks/useTranslation";
 
 interface VoiceChatProps {
   roomId: string;
@@ -11,6 +13,7 @@ interface VoiceChatProps {
 
 export default function VoiceChat({ roomId, enabled }: VoiceChatProps) {
   const { socket } = useSocket();
+  const { t } = useTranslation();
   const peerRef = useRef<Peer | null>(null);
   const callRef = useRef<MediaConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -19,7 +22,14 @@ export default function VoiceChat({ roomId, enabled }: VoiceChatProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [partnerConnected, setPartnerConnected] = useState(false);
-  const [manuallyDisconnected, setManuallyDisconnected] = useState(false);
+  const [manuallyDisconnected, setManuallyDisconnected] = useState(() => {
+    const saved = localStorage.getItem("autoVoice");
+    // Eğer ayar hiç yapılmadıysa veya 'false' ise, otomatik başlatma (true döndür)
+    if (saved !== null) {
+      return !JSON.parse(saved);
+    }
+    return true; // Varsayılan: Otomatik olarak BAŞLATMA
+  });
 
   const cleanup = useCallback(() => {
     if (callRef.current) {
@@ -167,6 +177,22 @@ export default function VoiceChat({ roomId, enabled }: VoiceChatProps) {
       setManuallyDisconnected(true);
       cleanup();
     } else {
+      const savedAuto = localStorage.getItem("autoVoice");
+      const isAuto = savedAuto ? JSON.parse(savedAuto) : false;
+
+      if (!isAuto) {
+        toast(t("settings_auto_voice_hint"), {
+          icon: "💡",
+          style: {
+            background: "rgba(255, 255, 255, 0.1)",
+            color: "#fff",
+            backdropFilter: "blur(10px)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+          },
+          duration: 5000,
+        });
+      }
+
       setManuallyDisconnected(false);
       initVoiceChat();
     }

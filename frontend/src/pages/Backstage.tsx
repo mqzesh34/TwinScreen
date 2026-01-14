@@ -37,9 +37,13 @@ export default function Backstage() {
   const [currentMovie, setCurrentMovie] = useState<Movie | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAddPlaylistModalOpen, setIsAddPlaylistModalOpen] = useState(false);
+  const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newVideoUrl, setNewVideoUrl] = useState("");
+  const [newPlaylistUrl, setNewPlaylistUrl] = useState("");
+  const [clearExisting, setClearExisting] = useState(false);
 
   const [users, setUsers] = useState<User[]>([]);
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
@@ -81,8 +85,9 @@ export default function Backstage() {
     };
   }, [socket]);
 
-  const handleAddMovie = async () => {
-    if (!newTitle || !newVideoUrl) return toast.error(t("common_error"));
+  const handleAddVideo = async () => {
+    if (!newTitle || !newVideoUrl)
+      return toast.error("Başlık ve video URL'si giriniz!");
     try {
       const res = await fetch("/movies", {
         method: "POST",
@@ -93,12 +98,51 @@ export default function Backstage() {
         body: JSON.stringify({ title: newTitle, preview_url: newVideoUrl }),
       });
       if (res.ok) {
-        toast.success(t("common_success"));
+        toast.success("Video başarıyla eklendi!");
         setIsAddModalOpen(false);
         setNewTitle("");
         setNewVideoUrl("");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || t("common_error"));
       }
     } catch {
+      toast.error(t("common_error"));
+    }
+  };
+
+  const handleAddPlaylist = async () => {
+    if (!newPlaylistUrl) return toast.error("Playlist URL'si giriniz!");
+
+    const loadingToast = toast.loading("Playlist videoları ekleniyor...");
+    try {
+      const res = await fetch("/movies", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userKey || ""}`,
+        },
+        body: JSON.stringify({
+          title: "Playlist",
+          preview_url: newPlaylistUrl,
+          clear_existing: clearExisting,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        toast.dismiss(loadingToast);
+        toast.success(`${data.movies?.length || 0} video başarıyla eklendi!`);
+        setIsAddPlaylistModalOpen(false);
+        setNewPlaylistUrl("");
+        setClearExisting(false);
+      } else {
+        toast.dismiss(loadingToast);
+        toast.error(data.error || t("common_error"));
+      }
+    } catch (error) {
+      toast.dismiss(loadingToast);
       toast.error(t("common_error"));
     }
   };
@@ -113,6 +157,23 @@ export default function Backstage() {
       if (res.ok) {
         toast.success(t("common_success"));
         setDeleteId(null);
+      }
+    } catch {
+      toast.error(t("common_error"));
+    }
+  };
+  const confirmDeleteAll = async () => {
+    try {
+      const res = await fetch("/movies", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${userKey || ""}` },
+      });
+      if (res.ok) {
+        toast.success(t("backstage_delete_all_success"));
+        setIsDeleteAllOpen(false);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || t("common_error"));
       }
     } catch {
       toast.error(t("common_error"));
@@ -194,13 +255,32 @@ export default function Backstage() {
               )}
             </p>
           </div>
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 bg-white/10 active:bg-white/20 border border-white/10 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
-          >
-            <Plus size={18} />
-            {t("backstage_add_movie_btn")}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-2 bg-white/10 active:bg-white/20 border border-white/10 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
+            >
+              <Plus size={18} />
+              Video Ekle
+            </button>
+            <button
+              onClick={() => setIsAddPlaylistModalOpen(true)}
+              className="flex items-center gap-2 bg-purple-600 active:bg-purple-500 border border-purple-500/30 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
+            >
+              <Film size={18} />
+              Playlist Ekle
+            </button>
+            {movies.filter((m) => m.added_by === userProfile?.name).length >
+              0 && (
+              <button
+                onClick={() => setIsDeleteAllOpen(true)}
+                className="flex items-center justify-center w-10 h-10 bg-red-500/10 active:bg-red-500/20 text-red-500 border border-red-500/10 rounded-xl transition-all"
+                title={t("backstage_delete_all_btn")}
+              >
+                <Trash2 size={18} />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -279,9 +359,7 @@ export default function Backstage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
           <div className="bg-[#121212] p-6 rounded-3xl w-full max-w-md border border-white/10 space-y-6">
             <div className="flex justify-between items-center">
-              <h3 className="text-xl font-bold">
-                {t("backstage_add_movie_title")}
-              </h3>
+              <h3 className="text-xl font-bold">Video Ekle</h3>
               <button
                 onClick={() => setIsAddModalOpen(false)}
                 className="text-white p-2"
@@ -293,7 +371,7 @@ export default function Backstage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-xs text-white/40 mb-1.5 uppercase">
-                  {t("backstage_movie_title_label")}
+                  Video Başlığı
                 </label>
                 <input
                   type="text"
@@ -306,11 +384,11 @@ export default function Backstage() {
 
               <div>
                 <label className="block text-xs text-white/40 mb-1.5 uppercase">
-                  {t("backstage_video_url_label")}
+                  Video URL
                 </label>
                 <input
                   type="text"
-                  placeholder="https://youtube.com/..."
+                  placeholder="https://youtube.com/watch?v=..."
                   value={newVideoUrl}
                   onChange={(e) => setNewVideoUrl(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none p-4 rounded-2xl text-white placeholder-white/20"
@@ -323,13 +401,79 @@ export default function Backstage() {
                 onClick={() => setIsAddModalOpen(false)}
                 className="flex-1 p-4 bg-white/5 border border-white/5 text-white rounded-2xl font-bold"
               >
-                {t("backstage_cancel_btn")}
+                İptal
               </button>
               <button
-                onClick={handleAddMovie}
+                onClick={handleAddVideo}
                 className="flex-1 p-4 bg-purple-600 active:bg-purple-500 text-white rounded-2xl font-bold transition-all"
               >
-                {t("backstage_add_btn")}
+                Video Ekle
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAddPlaylistModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
+          <div className="bg-[#121212] p-6 rounded-3xl w-full max-w-md border border-white/10 space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-bold">Playlist Ekle</h3>
+              <button
+                onClick={() => setIsAddPlaylistModalOpen(false)}
+                className="text-white p-2"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-white/40 mb-1.5 uppercase">
+                  Playlist URL
+                </label>
+                <input
+                  type="text"
+                  placeholder="https://youtube.com/playlist?list=..."
+                  value={newPlaylistUrl}
+                  onChange={(e) => setNewPlaylistUrl(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none p-4 rounded-2xl text-white placeholder-white/20"
+                />
+                <p className="text-[10px] text-white/30 mt-2">
+                  💡 Playlist içindeki tüm videolar (max 100) otomatik olarak
+                  eklenecektir.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                <input
+                  type="checkbox"
+                  id="clear-existing"
+                  checked={clearExisting}
+                  onChange={(e) => setClearExisting(e.target.checked)}
+                  className="w-5 h-5 rounded border-white/20 bg-white/10 text-purple-600 focus:ring-purple-500 focus:ring-offset-0"
+                />
+                <label
+                  htmlFor="clear-existing"
+                  className="text-sm text-white/80 cursor-pointer select-none"
+                >
+                  Mevcut tüm videoları sil
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsAddPlaylistModalOpen(false)}
+                className="flex-1 p-4 bg-white/5 border border-white/5 text-white rounded-2xl font-bold"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleAddPlaylist}
+                className="flex-1 p-4 bg-purple-600 active:bg-purple-500 text-white rounded-2xl font-bold transition-all"
+              >
+                Playlist Ekle
               </button>
             </div>
           </div>
@@ -398,6 +542,16 @@ export default function Backstage() {
         title={t("backstage_delete_movie_title")}
         description={t("backstage_delete_movie_desc")}
         confirmText={t("common_delete")}
+        variant="danger"
+        icon={<Trash2 size={32} className="text-red-500" />}
+      />
+      <ConfirmModal
+        isOpen={isDeleteAllOpen}
+        onClose={() => setIsDeleteAllOpen(false)}
+        onConfirm={confirmDeleteAll}
+        title={t("backstage_delete_all_title")}
+        description={t("backstage_delete_all_desc")}
+        confirmText={t("backstage_delete_all_btn")}
         variant="danger"
         icon={<Trash2 size={32} className="text-red-500" />}
       />

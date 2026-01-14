@@ -9,7 +9,6 @@ const DB_FILES = {
     MOVIES: path.join(DATA_DIR, 'movies.json'),
     SETTINGS: path.join(DATA_DIR, 'settings.json'),
     CONFIG: path.join(DATA_DIR, 'config.json'),
-    NOTIFICATIONS: path.join(DATA_DIR, 'notifications.json'),
     PRIVATE_ROOMS: path.join(DATA_DIR, 'privateRooms.json'),
     PLAYBACK_STATE: path.join(DATA_DIR, 'playbackState.json')
 };
@@ -18,7 +17,7 @@ const DEFAULT_CONTENTS = {
     [DB_FILES.USERS]: [],
     [DB_FILES.MOVIES]: [],
     [DB_FILES.SETTINGS]: {},
-    [DB_FILES.NOTIFICATIONS]: [],
+
     [DB_FILES.PRIVATE_ROOMS]: [],
     [DB_FILES.PLAYBACK_STATE]: {
         public: {
@@ -68,7 +67,8 @@ module.exports = {
     USERS_FILE: DB_FILES.USERS,
     MOVIES_FILE: DB_FILES.MOVIES,
     SETTINGS_FILE: DB_FILES.SETTINGS,
-    NOTIFICATIONS_FILE: DB_FILES.NOTIFICATIONS,
+    CONFIG_FILE: DB_FILES.CONFIG,
+
     PRIVATE_ROOMS_FILE: DB_FILES.PRIVATE_ROOMS,
     PLAYBACK_STATE_FILE: DB_FILES.PLAYBACK_STATE,
     readJson,

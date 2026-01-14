@@ -1,10 +1,11 @@
 const { SOCKET_EVENTS } = require('../utils/constants');
+const pushUtils = require('../utils/push');
 const { getRoomState, updateRoomState } = require('./playbackManager');
-const { addNotification } = require('./notificationManager');
 const { readJson, PRIVATE_ROOMS_FILE } = require('../utils/db');
 const jwt = require('jsonwebtoken');
 const config = require('../data/config.json');
 
+const userTimeouts = new Map();
 const roomHeartbeats = {};
 const voicePeers = {};
 
@@ -46,7 +47,6 @@ const setupSocketHandlers = (io) => {
 
             socket.on(SOCKET_EVENTS.SEND_MESSAGE, async (messageData) => {
                 io.emit(SOCKET_EVENTS.RECEIVE_MESSAGE, messageData);
-                await addNotification(io, "Yeni Mesaj", `${messageData.text}`, socket.userData.name, socket.userData.key);
             });
 
             socket.on(SOCKET_EVENTS.JOIN_VIDEO_ROOM, async (data) => {
@@ -122,14 +122,6 @@ const setupSocketHandlers = (io) => {
                     }
                 }
 
-                await addNotification(
-                    io, 
-                    "Oda Bildirimi", 
-                    `${senderName} odaya katıldı.`, 
-                    senderName, 
-                    socket.userData.key
-                );
-
                 if (typeof callback === 'function') {
                     if (partnerInRoom) {
                         callback({ status: 'already_in_room' });
@@ -145,6 +137,7 @@ const setupSocketHandlers = (io) => {
                 
                 socket.to(roomId).emit(SOCKET_EVENTS.PLAY_VIDEO, { time, user: socket.userData.name });
                 await updateRoomState(roomId, { isPlaying: true, time });
+                io.emit(SOCKET_EVENTS.LAST_WATCHED_UPDATED);
             });
 
             socket.on(SOCKET_EVENTS.PAUSE_VIDEO, async (data) => {
@@ -153,6 +146,7 @@ const setupSocketHandlers = (io) => {
 
                 socket.to(roomId).emit(SOCKET_EVENTS.PAUSE_VIDEO, { time, user: socket.userData.name });
                 await updateRoomState(roomId, { isPlaying: false, time });
+                io.emit(SOCKET_EVENTS.LAST_WATCHED_UPDATED);
             });
 
             socket.on(SOCKET_EVENTS.SEEK_VIDEO, async (data) => {
@@ -174,6 +168,57 @@ const setupSocketHandlers = (io) => {
                 await updateRoomState(roomId, { time: syncTime, isPlaying: true });
             });
 
+            socket.on("send_nudge", async ({ roomId, title }) => {
+                const sender = socket.userData ? socket.userData.name : "Partnerin";
+                console.log(`[SOCKET] Nudge sent by ${sender} in ${roomId}`);
+                
+                let targetUser = null;
+
+                if (roomId.startsWith('private_')) {
+                    try {
+                        const privateRoomId = parseInt(roomId.split('_')[1]);
+                        const rooms = await readJson(PRIVATE_ROOMS_FILE);
+                        const room = rooms.find(r => r.id === privateRoomId);
+                        
+                        if (room) {
+                            if (room.creator === sender) targetUser = room.invitedUser;
+                            else if (room.invitedUser === sender) targetUser = room.creator;
+                        }
+                    } catch (err) {
+                        console.error("Nudge room lookup failed:", err);
+                    }
+                }
+
+                if (targetUser) {
+                    const sent = await pushUtils.sendToUser(targetUser, {
+                        title: 'TwinScreen 👋',
+                        body: `${sender} seni ${title || "video"} izlemeye çağırıyor!`,
+                        url: `/private-room/${roomId}`
+                    }).catch(err => {
+                        console.error("Nudge push error:", err);
+                        return false;
+                    });
+
+                    if (sent) {
+                        socket.emit('custom_toast', {
+                            message: "Partnerine izleme daveti gönderildi! 🚀",
+                            icon: '✅'
+                        });
+                    } else {
+                        socket.emit('custom_toast', {
+                            message: `${targetUser} kullanıcısının bildirimleri kapalı.`,
+                            icon: '🔕'
+                        });
+                    }
+                } else {
+                    console.log(`[PUSH] Target user not found for room ${roomId}`);
+                    socket.emit('custom_toast', {
+                        message: "Partner bulunamadı.",
+                        icon: '❓'
+                    });
+                }
+            });
+
             socket.on(SOCKET_EVENTS.CHANGE_MOVIE, async (data) => {
                 let roomId = "public";
                 let videoId = data;
@@ -187,6 +232,7 @@ const setupSocketHandlers = (io) => {
 
                 io.to(roomId).emit(SOCKET_EVENTS.CHANGE_MOVIE, videoId);
                 await updateRoomState(roomId, { videoId, time: 0, isPlaying: true });
+                io.emit(SOCKET_EVENTS.LAST_WATCHED_UPDATED);
             });
 
             socket.on(SOCKET_EVENTS.HEARTBEAT, async (data) => {
@@ -241,6 +287,7 @@ const setupSocketHandlers = (io) => {
                              const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
                              await updateRoomState(roomId, { time: avgTime, isPlaying: true });
                              roomHeartbeats[roomId].lastSaved = now;
+                             io.emit(SOCKET_EVENTS.LAST_WATCHED_UPDATED);
                         }
                     }
                 }
@@ -251,15 +298,15 @@ const setupSocketHandlers = (io) => {
                      const minTime = Math.min(...times);
                      
                      if ((maxTime - minTime) > 2.5) {
-                         const avgTime = Math.round((minTime + maxTime) / 2);
-                         
-                         io.to(roomId).emit(SOCKET_EVENTS.FORCE_SYNC, { 
-                            time: avgTime, 
-                            isPlaying: true,
-                            reason: `Senkronizasyon farkı: ${(maxTime - minTime).toFixed(1)}s` 
-                         });
-                         
-                         await updateRoomState(roomId, { time: avgTime, isPlaying: true });
+                          const avgTime = Math.round((minTime + maxTime) / 2);
+                          
+                          io.to(roomId).emit(SOCKET_EVENTS.FORCE_SYNC, { 
+                             time: avgTime, 
+                             isPlaying: true,
+                             reason: `Senkronizasyon farkı: ${(maxTime - minTime).toFixed(1)}s` 
+                          });
+                          
+                          await updateRoomState(roomId, { time: avgTime, isPlaying: true });
                      }
                 }
                 

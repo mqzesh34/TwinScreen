@@ -25,6 +25,14 @@ router.post('/', auth, async (req, res) => {
     const settings = await readSettings();
     let settingsUpdated = false;
 
+    const usedKeys = new Set();
+    for (const u of newUsers) {
+        if (usedKeys.has(u.key)) {
+            return res.status(400).json({ error: `"${u.key}" anahtarı birden fazla kullanıcıda tanımlanmış. Her anahtar benzersiz olmalıdır.` });
+        }
+        usedKeys.add(u.key);
+    }
+
     newUsers.forEach(newUser => {
         const oldUser = oldUsers.find(u => u.id === newUser.id);
         if (oldUser) {

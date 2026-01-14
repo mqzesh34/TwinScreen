@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import YouTubeSyncPlayer from "../components/YouTubeSyncPlayer";
 import TopBar from "../components/TopBar";
 import BottomNavbar from "../components/BottomNavbar";
@@ -29,9 +30,11 @@ export default function PrivateRoom() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [activeRoom, setActiveRoom] = useState<Room | null>(null);
   const [deleteRoomId, setDeleteRoomId] = useState<number | null>(null);
+  const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
   const { userKey } = useAuth();
   const { socket } = useSocket();
   const { t } = useTranslation();
+  const { roomId: urlRoomId } = useParams();
 
   const fetchRooms = async () => {
     try {
@@ -44,8 +47,29 @@ export default function PrivateRoom() {
     } catch {}
   };
 
+  const fetchRoomsWithReturn = async () => {
+    try {
+      const res = await fetch("/private-rooms", {
+        headers: { Authorization: `Bearer ${userKey || ""}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRooms(data);
+        return data;
+      }
+    } catch {}
+    return null;
+  };
+
   useEffect(() => {
-    fetchRooms();
+    fetchRoomsWithReturn().then((roomsList) => {
+      // URL'de roomId varsa ve henüz activeRoom set edilmemişse otomatik aç
+      if (urlRoomId && roomsList) {
+        const id = parseInt(urlRoomId.replace("private_", ""));
+        const room = roomsList.find((r: Room) => r.id === id);
+        if (room) setActiveRoom(room);
+      }
+    });
 
     if (socket) {
       socket.on("private_rooms_updated", fetchRooms);
@@ -56,7 +80,7 @@ export default function PrivateRoom() {
       if (socket) socket.off("private_rooms_updated", fetchRooms);
       clearInterval(interval);
     };
-  }, [userKey, socket]);
+  }, [userKey, socket, urlRoomId]);
 
   const handleDeleteRoom = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -75,6 +99,24 @@ export default function PrivateRoom() {
         fetchRooms();
         if (activeRoom?.id === deleteRoomId) setActiveRoom(null);
         setDeleteRoomId(null);
+      } else {
+        toast.error(t("private_rooms_delete_error"));
+      }
+    } catch {
+      toast.error(t("private_rooms_error"));
+    }
+  };
+  const confirmDeleteAll = async () => {
+    try {
+      const res = await fetch("/private-rooms", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${userKey || ""}` },
+      });
+      if (res.ok) {
+        toast.success(t("private_rooms_delete_all_success"));
+        fetchRooms();
+        setActiveRoom(null);
+        setIsDeleteAllOpen(false);
       } else {
         toast.error(t("private_rooms_delete_error"));
       }
@@ -119,6 +161,15 @@ export default function PrivateRoom() {
                   {t("private_rooms_subtitle")}
                 </p>
               </div>
+              {rooms.length > 0 && (
+                <button
+                  onClick={() => setIsDeleteAllOpen(true)}
+                  className="ml-auto flex items-center gap-2 bg-red-500/10 active:bg-red-500/20 text-red-500 border border-red-500/10 px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                >
+                  <Trash2 size={16} />
+                  {t("private_rooms_delete_all_btn")}
+                </button>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -169,6 +220,16 @@ export default function PrivateRoom() {
         title={t("private_rooms_confirm_delete_title")}
         description={t("private_rooms_confirm_delete_desc")}
         confirmText={t("private_rooms_confirm_delete_btn")}
+        variant="danger"
+        icon={<Trash2 size={32} className="text-red-500" />}
+      />
+      <ConfirmModal
+        isOpen={isDeleteAllOpen}
+        onClose={() => setIsDeleteAllOpen(false)}
+        onConfirm={confirmDeleteAll}
+        title={t("private_rooms_confirm_delete_all_title")}
+        description={t("private_rooms_confirm_delete_all_desc")}
+        confirmText={t("private_rooms_delete_all_btn")}
         variant="danger"
         icon={<Trash2 size={32} className="text-red-500" />}
       />

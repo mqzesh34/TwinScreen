@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import Backstage from "./pages/Backstage";
 import Settings from "./pages/Settings";
 import PrivateRoom from "./pages/PrivateRoom";
+import Setup from "./pages/Setup";
 import {
   MemoryRouter,
   Routes,
@@ -21,26 +22,34 @@ function AnimatedRoutes() {
   const location = useLocation();
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isInstalled, setIsInstalled] = useState<boolean | null>(null);
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitialLoad(false);
-    }, 2000);
+    }, 500);
+
+    fetch("/install/status")
+      .then((r) => r.json())
+      .then((data) => setIsInstalled(data.isInstalled))
+      .catch(() => setIsInstalled(true));
+
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     if (!isInitialLoad) {
-      setIsTransitioning(true);
-      const timer = setTimeout(() => {
-        setIsTransitioning(false);
-      }, 1000);
-      return () => clearTimeout(timer);
+      setIsTransitioning(false);
     }
   }, [location.pathname]);
 
-  const showGlobalLoading = authLoading || isInitialLoad || isTransitioning;
+  const showGlobalLoading =
+    authLoading || isInitialLoad || isTransitioning || isInstalled === null;
+
+  if (isInstalled === false && location.pathname !== "/setup") {
+    return <Navigate to="/setup" />;
+  }
 
   return (
     <>
@@ -56,6 +65,10 @@ function AnimatedRoutes() {
         transition={{ duration: 0.3 }}
       >
         <Routes location={location}>
+          <Route
+            path="/setup"
+            element={isInstalled === false ? <Setup /> : <Navigate to="/" />}
+          />
           <Route path="/" element={<LoginPage />} />
           <Route
             path="/home"
@@ -73,36 +86,36 @@ function AnimatedRoutes() {
             path="/private-room"
             element={isAuthenticated ? <PrivateRoom /> : <Navigate to="/" />}
           />
+          <Route
+            path="/private-room/:roomId"
+            element={isAuthenticated ? <PrivateRoom /> : <Navigate to="/" />}
+          />
         </Routes>
       </motion.div>
     </>
   );
 }
 
-import { NotificationProvider } from "./contexts/NotificationContext";
-
 function App() {
   return (
     <AuthProvider>
       <MemoryRouter>
         <SocketProvider>
-          <NotificationProvider>
-            <Toaster
-              position="top-center"
-              reverseOrder={false}
-              containerStyle={{ zIndex: 100000 }}
-              toastOptions={{
-                className: "custom-toast",
-                success: {
-                  iconTheme: {
-                    primary: "#A855F7",
-                    secondary: "#fff",
-                  },
+          <Toaster
+            position="top-center"
+            reverseOrder={false}
+            containerStyle={{ zIndex: 100000 }}
+            toastOptions={{
+              className: "custom-toast",
+              success: {
+                iconTheme: {
+                  primary: "#A855F7",
+                  secondary: "#fff",
                 },
-              }}
-            />
-            <AnimatedRoutes />
-          </NotificationProvider>
+              },
+            }}
+          />
+          <AnimatedRoutes />
         </SocketProvider>
       </MemoryRouter>
     </AuthProvider>

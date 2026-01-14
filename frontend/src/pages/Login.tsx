@@ -10,7 +10,14 @@ export default function LoginPage() {
   const { login, isAuthenticated, isLoading: authLoading } = useAuth();
   const { t } = useTranslation();
 
+  const [appName, setAppName] = useState("TwinScreen");
+
   useEffect(() => {
+    fetch("/install/status")
+      .then((r) => r.json())
+      .then((data) => setAppName(data.appName || "TwinScreen"))
+      .catch(() => {});
+
     if (isAuthenticated) {
       navigate("/home");
     }
@@ -44,7 +51,13 @@ export default function LoginPage() {
       <div className="relative w-full max-w-sm p-8 rounded-3xl bg-white/5 backdrop-blur-2xl border border-white/10">
         <div className="text-center mb-8 space-y-1">
           <h1 className="text-3xl font-bold text-white tracking-tighter">
-            {t("login_title")}
+            {appName.includes("TwinScreen") ? (
+              <>
+                Twin<span className="text-purple-500">Screen</span>
+              </>
+            ) : (
+              appName
+            )}
           </h1>
           <p className="text-sm text-white/40">{t("login_subtitle")}</p>
         </div>

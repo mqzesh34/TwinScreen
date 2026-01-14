@@ -1,21 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../contexts/AuthContext";
-import { Bell, Settings, LogOut, Home } from "lucide-react";
+import { Settings, LogOut, Home } from "lucide-react";
 import ConfirmModal from "./ConfirmModal";
-import NotificationsModal from "./NotificationsModal";
-import { useNotifications } from "../contexts/NotificationContext";
 import useTranslation from "../hooks/useTranslation";
 
 export default function TopBar() {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const { unreadCount, markAllAsRead } = useNotifications();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { logout } = useAuth();
   const { t } = useTranslation();
+  const [appName, setAppName] = useState("TwinScreen");
+
+  useEffect(() => {
+    fetch("/install/status")
+      .then((r) => r.json())
+      .then((data) => setAppName(data.appName || "TwinScreen"))
+      .catch(() => {});
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -29,23 +33,16 @@ export default function TopBar() {
     <div className="fixed top-4 left-0 right-0 flex justify-center z-50">
       <div className="w-[90%] max-w-3xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 flex items-center justify-between gap-12 overflow-hidden">
         <h1 className="text-lg font-bold tracking-tight text-white">
-          Twin<span className="text-purple-500">Screen</span>
+          {appName.includes("TwinScreen") ? (
+            <>
+              Twin<span className="text-purple-500">Screen</span>
+            </>
+          ) : (
+            appName
+          )}
         </h1>
 
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => {
-              setIsNotificationsOpen(true);
-              markAllAsRead();
-            }}
-            className="relative text-white hover:text-white/80 transition-all"
-          >
-            <Bell size={18} />
-            {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-purple-500 rounded-full animate-pulse ring-2 ring-[#121212]" />
-            )}
-          </button>
-
           <button
             onClick={() =>
               navigate(pathname === "/settings" ? "/home" : "/settings")
@@ -60,11 +57,6 @@ export default function TopBar() {
           </button>
         </div>
       </div>
-
-      <NotificationsModal
-        isOpen={isNotificationsOpen}
-        onClose={() => setIsNotificationsOpen(false)}
-      />
 
       <ConfirmModal
         isOpen={isLogoutModalOpen}
