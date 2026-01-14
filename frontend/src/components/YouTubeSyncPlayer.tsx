@@ -228,6 +228,7 @@ export default function YouTubeSyncPlayer({
       }
 
       forcePauseInterval.current = setInterval(() => {
+        if (!isCountdownActive.current) return;
         if (playerRef.current && playerRef.current.getPlayerState() === 1) {
           isRemoteUpdate.current = true;
           playerRef.current.pauseVideo();
